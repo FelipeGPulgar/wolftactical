@@ -1,0 +1,108 @@
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: #21232a;
+  color: white;
+  line-height: 1.6;
+}
+a {
+  color: white;
+  text-decoration: none;
+}
+/* Hero Section Styles */
+.hero {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap; /* Allow items to wrap on smaller screens */
+  padding: 2rem;
+  gap: 1rem;
+  text-align: center;
+}
+
+.hero-item {
+  background-color: #333;
+  padding: 1rem;
+  border-radius: 5px;
+  min-width: 150px;
+  transition: transform 0.3s ease;
+}
+.hero-item:hover {
+  transform: translateY(-5px);
+}
+
+/* Brands Styles */
+.brands {
+  padding: 2rem;
+  text-align: center;
+}
+
+.brand-list {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap; /* Allow items to wrap on smaller screens */
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.brand {
+  background-color: #222;
+  padding: 0.75rem 1rem;
+  border-radius: 5px;
+  transition: background-color 0.3s ease;
+}
+.brand:hover {
+  background-color: #444;
+}
+/* Subscribe Styles */
+
+.subscribe {
+  text-align: center;
+  padding: 2rem;
+  background-color: #222;
+  margin: 2rem;
+  border-radius: 10px;
+}
+
+.subscribe input[type="email"] {
+  padding: 0.5rem;
+  border: none;
+  border-radius: 5px;
+  margin-right: 0.5rem;
+  color: black;
+}
+
+.subscribe button {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 5px;
+  background-color: #555;
+  color: white;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.subscribe button:hover {
+  background-color: #777;
+}
+
+/* Footer Styles */
+.footer {
+  text-align: center;
+  padding: 1rem;
+  background-color: black;
+  position: relative;
+}
+
+
+@media (max-width: 480px) {
+  .subscribe input[type="email"] {
+    width: 100%;
+    margin-bottom: 0.5rem;
+    margin-right: 0;
+  }
+
+  .subscribe button {
+    width: 100%;
+  }
+}
