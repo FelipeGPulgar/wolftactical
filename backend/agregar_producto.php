@@ -28,6 +28,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             VALUES ('$nombre', '$modelo', '$categoria', '$subcategoria', '$stock_option', '$stock_quantity', '$precio', '$imagen')";
     if (mysqli_query($conn, $sql)) {
         echo "Producto agregado con éxito.";
+
+        // Insertar notificación en la tabla notifications
+        $notificationSql = "INSERT INTO notifications (message, type) VALUES (?, ?)";
+        $stmtNotification = $conn->prepare($notificationSql);
+        $stmtNotification->bind_param("ss", $message, $type);
+        $message = "Producto agregado: $nombre";
+        $type = "success";
+        $stmtNotification->execute();
     } else {
         echo "Error: " . $sql . "<br>" . mysqli_error($conn);
     }

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import './EditarProducto.css';
-import notificationBellInactive from '../../Images/notification-bell-inactive.svg';
 import notificationBellActive from '../../Images/notification-bell-active.svg';
+import notificationBellInactive from '../../Images/notification-bell-inactive.svg';
 
 function EditarProducto() {
   const { id } = useParams();
@@ -17,25 +17,17 @@ function EditarProducto() {
     precio: '',
     imagen: null
   });
-  const [imagenActual, setImagenActual] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  // eslint-disable-next-line no-unused-vars
   const [notifications, setNotifications] = useState([]);
-  const [isNotificationBellActive, setIsNotificationBellActive] = useState(false);
 
   const addNotification = (message, type) => {
     const id = Date.now();
     setNotifications(prev => [...prev, { id, message, type }]);
-    setIsNotificationBellActive(true);
     setTimeout(() => {
       setNotifications(prev => prev.filter(notification => notification.id !== id));
-      if (notifications.length === 1) setIsNotificationBellActive(false);
     }, 120000); // 2 minutes
-  };
-
-  const removeNotification = (id) => {
-    setNotifications(prev => prev.filter(notification => notification.id !== id));
-    if (notifications.length === 1) setIsNotificationBellActive(false);
   };
 
   useEffect(() => {
@@ -64,7 +56,6 @@ function EditarProducto() {
             precio: data.data.price || '',
             imagen: null
           });
-          setImagenActual(data.data.main_image || '');
         } else {
           throw new Error(data.message || 'Producto no encontrado');
         }
@@ -121,10 +112,10 @@ function EditarProducto() {
 
       if (data.success) {
         addNotification('Producto actualizado con éxito', 'success');
-        setIsNotificationBellActive(true); // Cambiar a notificación activa
+        document.querySelector('.notification-bell img').src = notificationBellActive; // Cambiar imagen a activa
         setTimeout(() => {
-          setIsNotificationBellActive(false); // Volver a inactiva después de un tiempo
-        }, 120000); // 2 minutos
+          document.querySelector('.notification-bell img').src = notificationBellInactive; // Volver a inactiva después de 2 minutos
+        }, 120000);
         navigate('/admin/productos');
       } else {
         addNotification(data.message || 'Error al actualizar el producto', 'error');
@@ -145,23 +136,6 @@ function EditarProducto() {
 
   return (
     <div className="form-container">
-      {/* Eliminada la campana de notificaciones */}
-      {/* <div className="notification-bell">
-        <img
-          src={isNotificationBellActive ? notificationBellActive : notificationBellInactive}
-          alt="Notification Bell"
-        />
-        {notifications.length > 0 && (
-          <div className="notification-list">
-            {notifications.map(notification => (
-              <div key={notification.id} className={`notification ${notification.type === 'success' ? 'notification-success' : 'notification-error'}`}>
-                {notification.message}
-                <button className="close-button" onClick={() => removeNotification(notification.id)}>x</button>
-              </div>
-            ))}
-          </div>
-        )}
-      </div> */}
       {error && <div className="alert alert-error">{error}</div>}
 
       <form onSubmit={handleSubmit}>
@@ -205,18 +179,6 @@ function EditarProducto() {
           min="0"
           step="0.01"
         />
-
-        {/* Eliminada la imagen del producto */}
-        {/* <label>Imagen actual:</label>
-        {imagenActual && (
-          <div style={{ marginBottom: '10px' }}>
-            <img
-              src={`http://localhost/schizotactical/backend/imagenes/${imagenActual}`}
-              alt="Imagen actual"
-              style={{ maxWidth: '200px' }}
-            />
-          </div>
-        )} */}
 
         <label>Subir nueva imagen</label>
         <input type="file" accept="image/*" onChange={handleFileChange} />

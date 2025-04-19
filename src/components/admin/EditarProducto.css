@@ -89,8 +89,8 @@
   top: 20px;
   right: 20px;
   padding: 15px 20px;
-  border-radius: 5px;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
   z-index: 1000;
   font-size: 1rem;
   font-weight: bold;
@@ -99,14 +99,24 @@
 
 /* Notificación de éxito */
 .notification-success {
-  background: #4caf50;
-  color: white;
+  background-color: #28a745; /* Verde más vibrante */
+  color: #ffffff;
 }
 
 /* Notificación de error */
 .notification-error {
-  background-color: #f44336;
-  color: white;
+  background-color: #dc3545; /* Rojo más vibrante */
+  color: #ffffff;
+}
+
+.notification-warning {
+  background-color: #ffc107; /* Amarillo para advertencias */
+  color: #212529;
+}
+
+.notification-info {
+  background-color: #17a2b8; /* Azul para información */
+  color: #ffffff;
 }
 
 @keyframes fadeOut {
@@ -120,4 +130,114 @@
     opacity: 0;
     transform: translateY(-20px);
   }
+}
+
+/* EditarProducto.css */
+
+/* General styles for the edit product form */
+.edit-product-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 2rem;
+  background-color: #f9f9f9;
+  border-radius: 10px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.edit-product-form label {
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+}
+
+.edit-product-form input,
+.edit-product-form select,
+.edit-product-form textarea {
+  padding: 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  font-size: 1rem;
+}
+
+.edit-product-form button {
+  background-color: #4caf50;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.edit-product-form button:hover {
+  background-color: #45a049;
+}
+
+/* Notification styles */
+.notification-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+  display: none;
+}
+
+.notification-overlay.active {
+  display: block;
+}
+
+.notification-center {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: white;
+  color: black;
+  border-radius: 10px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+  width: 400px;
+  max-height: 500px;
+  overflow-y: auto;
+  padding: 20px;
+}
+
+.notification-center .notification {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  border-bottom: 1px solid #ddd;
+}
+
+.notification-center .notification:last-child {
+  border-bottom: none;
+}
+
+.notification-center .close-button {
+  background: none;
+  border: none;
+  color: #6c757d; /* Gris más claro */
+  font-size: 1.2rem;
+  cursor: pointer;
+}
+
+.notification-center .close-button:hover {
+  color: #343a40; /* Gris más oscuro */
+}
+
+.notification-center .delete-button {
+  background-color: #e74c3c; /* Rojo más vibrante */
+  color: white;
+  border: none;
+  border-radius: 5px;
+  padding: 5px 10px;
+  cursor: pointer;
+}
+
+.notification-center .delete-button:hover {
+  background-color: #c0392b;
 }

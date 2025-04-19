@@ -1,19 +1,20 @@
-import React, { useState, useEffect } from "react";
+// eslint-disable-next-line no-unused-vars
+import React, { useEffect } from "react";
 import HeroSection from "../components/HeroSection";
 import Brands from "../components/Brands";
 import Subscribe from "../components/Subscribe";
 import Carousel from "../components/Carousel";
 import VideoSection from "../components/VideoSection"; // Importar el nuevo componente
-import ProductCard from "../components/ProductCard"; // Un componente que mostrará cada producto
 
 function Home() {
-  const [products, setProducts] = useState([]);
+  // Eliminado el uso de setProducts ya que no está definido
+  // const [products, setProducts] = useState([]);
 
   useEffect(() => {
     // Llamada a la API para obtener los productos
     fetch('http://localhost/schizotactical/backend/get_products.php')
       .then(response => response.json())
-      .then(data => setProducts(data))
+      .then(data => console.log('Productos obtenidos:', data))
       .catch(error => console.error('Error al obtener productos:', error));
   }, []);
 

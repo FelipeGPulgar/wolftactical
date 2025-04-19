@@ -1,22 +1,16 @@
 <?php
 session_start();
 
-// Configuración de CORS dinámica
-$allowedOrigins = [
-    "http://localhost:3000",
-    "http://localhost:3003",
-    "http://127.0.0.1:3000"
-];
+// Cambiar el valor de 'Access-Control-Allow-Origin' para permitir múltiples orígenes
+$allowed_origins = ['http://localhost:3000', 'http://localhost:3001'];
 
-$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
-
-if (in_array($origin, $allowedOrigins)) {
-    header("Access-Control-Allow-Origin: $origin");
+if (isset($_SERVER['HTTP_ORIGIN']) && in_array($_SERVER['HTTP_ORIGIN'], $allowed_origins)) {
+    header("Access-Control-Allow-Origin: {$_SERVER['HTTP_ORIGIN']}");
 } else {
-    header("Access-Control-Allow-Origin: http://localhost:3000"); // Default para desarrollo
+    header("Access-Control-Allow-Origin: http://localhost:3000"); // Valor predeterminado
 }
 
-header("Access-Control-Allow-Methods: POST, OPTIONS");
+header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type, Authorization");
 header("Access-Control-Allow-Credentials: true");
 header("Content-Type: application/json");
@@ -67,6 +61,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->execute(['nombre' => $nombre, 'modelo' => $modelo, 'categoria' => $categoria, 'subcategoria' => $subcategoria, 
                             'stock_option' => $stock_option, 'stock_quantity' => $stock_quantity, 'precio' => $precio, 'id' => $id]);
         }
+
+        // Insertar notificación en la tabla notifications
+        $notificationSql = "INSERT INTO notifications (message, type) VALUES (:message, :type)";
+        $notificationStmt = $pdo->prepare($notificationSql);
+        $notificationStmt->execute([
+            'message' => 'Producto actualizado: ' . $nombre,
+            'type' => 'success'
+        ]);
+
         echo json_encode(['success' => true, 'message' => 'Producto actualizado con éxito']);
     } catch (PDOException $e) {
         http_response_code(500);
