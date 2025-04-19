@@ -5,8 +5,21 @@ ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
 // Configuración CORS
-header("Access-Control-Allow-Origin: http://localhost:3002");
-header("Access-Control-Allow-Methods: POST, GET, OPTIONS");
+$allowedOrigins = [
+    'http://localhost:3000',
+    'http://localhost:3002', 
+    'http://localhost:3003',
+    'http://127.0.0.1:3003'
+];
+
+$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+if (in_array($origin, $allowedOrigins)) {
+    header("Access-Control-Allow-Origin: $origin");
+} else {
+    header("Access-Control-Allow-Origin: http://localhost:3000"); // Default
+}
+
+header("Access-Control-Allow-Methods: POST, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type, Authorization");
 header("Access-Control-Allow-Credentials: true");
 header("Content-Type: application/json");
@@ -24,15 +37,18 @@ session_start();
 $response = ['success' => false, 'message' => ''];
 
 try {
+    // Solo aceptar método POST
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
         throw new Exception('Método no permitido');
     }
 
+    // Obtener datos del cuerpo de la solicitud
     $input = json_decode(file_get_contents('php://input'), true);
     if (json_last_error() !== JSON_ERROR_NONE) {
         throw new Exception('Formato de datos inválido');
     }
 
+    // Validar campos
     $username = trim($input['username'] ?? '');
     $password = trim($input['password'] ?? '');
 
@@ -40,14 +56,16 @@ try {
         throw new Exception('Usuario y contraseña requeridos');
     }
 
-    // Autenticación
+    // Autenticación (en producción usaría password_hash/verify)
     if ($username === 'admin' && $password === 'admin1234') {
         $_SESSION['admin_logged_in'] = true;
-        $_SESSION['admin_username'] = 'admin';
+        $_SESSION['admin_username'] = $username;
+        $_SESSION['last_activity'] = time();
+        
         $response = [
             'success' => true,
             'message' => 'Autenticación exitosa',
-            'redirect' => 'http://localhost:3002/productos' // Ruta absoluta
+            'redirect' => '/admin/productos' // Ruta relativa
         ];
     } else {
         throw new Exception('Credenciales incorrectas');

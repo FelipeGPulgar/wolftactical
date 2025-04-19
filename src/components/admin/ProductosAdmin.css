@@ -1,0 +1,76 @@
+/* ProductosAdmin.css */
+.products-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+  }
+  
+  .products-table {
+    width: 100%;
+    background: white;
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+    overflow: hidden;
+    border-collapse: collapse;
+  }
+  
+  .products-table thead {
+    background-color: var(--primary-color);
+    color: white;
+  }
+  
+  .products-table th {
+    padding: 1rem;
+    text-align: left;
+    font-weight: 500;
+  }
+  
+  .products-table td {
+    padding: 1rem;
+    border-bottom: 1px solid #eee;
+  }
+  
+  .products-table tr:last-child td {
+    border-bottom: none;
+  }
+  
+  .products-table tr:hover {
+    background-color: #f8f9fa;
+  }
+  
+  .actions-cell {
+    display: flex;
+    gap: 0.5rem;
+  }
+  
+  .status-badge {
+    display: inline-block;
+    padding: 0.3rem 0.6rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 500;
+  }
+  
+  .status-instock {
+    background-color: rgba(76, 201, 240, 0.1);
+    color: var(--success-color);
+  }
+  
+  .status-preorder {
+    background-color: rgba(247, 37, 133, 0.1);
+    color: var(--danger-color);
+  }
+  
+  .empty-state {
+    text-align: center;
+    padding: 3rem;
+    background: white;
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+  }
+  
+  .empty-state p {
+    color: var(--gray-color);
+    margin-bottom: 1.5rem;
+  }
