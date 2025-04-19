@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import '../Login.css';
+import { useNavigate } from 'react-router-dom';
 
 function Login() {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [message, setMessage] = useState('');
+    const navigate = useNavigate();
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -23,8 +25,18 @@ function Login() {
 
             setMessage(data.message);
 
-            if (data.success && data.redirect) {
-                window.location.href = data.redirect;  // Esto redirige a la URL que devuelva el backend
+            if (data.success) {
+                // Guardar en localStorage o contexto de autenticación
+                localStorage.setItem('isAdminLoggedIn', 'true');
+                
+                // Redirigir usando react-router
+                if (data.redirect) {
+                    // Extraer la ruta de la URL completa
+                    const redirectPath = new URL(data.redirect).pathname;
+                    navigate(redirectPath);
+                } else {
+                    navigate('/productos');
+                }
             }
         } catch (error) {
             console.error('Error al iniciar sesión:', error);
@@ -41,12 +53,14 @@ function Login() {
                     placeholder="Nombre de usuario"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
+                    required
                 />
                 <input
                     type="password"
                     placeholder="Contraseña"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
+                    required
                 />
                 <button type="submit">Ingresar</button>
                 {message && <p className="message">{message}</p>}

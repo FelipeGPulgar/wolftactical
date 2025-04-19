@@ -1,22 +1,27 @@
 <?php
-// ------------------- CORS --------------------
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    header("Access-Control-Allow-Origin: http://localhost:3000");
-    header("Access-Control-Allow-Methods: POST, GET, OPTIONS");
-    header("Access-Control-Allow-Headers: Content-Type, Authorization");
-    header("Access-Control-Allow-Credentials: true");
-    exit(0);
-}
+// Configuración de errores
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
 
-header("Access-Control-Allow-Origin: http://localhost:3000");
+// Configuración CORS
+header("Access-Control-Allow-Origin: http://localhost:3002");
+header("Access-Control-Allow-Methods: POST, GET, OPTIONS");
+header("Access-Control-Allow-Headers: Content-Type, Authorization");
 header("Access-Control-Allow-Credentials: true");
 header("Content-Type: application/json");
 
-// ------------------- Base de datos --------------------
+// Manejo de OPTIONS
+if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
+    http_response_code(200);
+    exit();
+}
+
 require_once __DIR__ . '/db.php';
+
 session_start();
 
-$response = ['success' => false, 'message' => '', 'redirect' => null];
+$response = ['success' => false, 'message' => ''];
 
 try {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -24,6 +29,10 @@ try {
     }
 
     $input = json_decode(file_get_contents('php://input'), true);
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        throw new Exception('Formato de datos inválido');
+    }
+
     $username = trim($input['username'] ?? '');
     $password = trim($input['password'] ?? '');
 
@@ -31,14 +40,14 @@ try {
         throw new Exception('Usuario y contraseña requeridos');
     }
 
-    // AUTENTICACIÓN BÁSICA
+    // Autenticación
     if ($username === 'admin' && $password === 'admin1234') {
-        $_SESSION['user'] = ['username' => 'admin'];
+        $_SESSION['admin_logged_in'] = true;
+        $_SESSION['admin_username'] = 'admin';
         $response = [
             'success' => true,
             'message' => 'Autenticación exitosa',
-            'redirect' => '/producto.php', // Aquí cambiamos la redirección
-            'user_type' => 'administrador'
+            'redirect' => 'http://localhost:3002/productos' // Ruta absoluta
         ];
     } else {
         throw new Exception('Credenciales incorrectas');
@@ -47,6 +56,5 @@ try {
     $response['message'] = $e->getMessage();
 }
 
-http_response_code(200);
 echo json_encode($response);
 ?>
