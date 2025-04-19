@@ -1,6 +1,7 @@
 import React from "react";
-import { Route, Routes, Navigate } from "react-router-dom";
+import { Route, Routes, Navigate, useLocation } from "react-router-dom";
 import Navbar from "./components/Navbar";
+import AdminNavbar from "./components/admin/AdminNavbar";
 import Footer from "./components/Footer";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
@@ -8,9 +9,13 @@ import Admin from "./pages/Admin";
 import "./styles.css";
 
 function App() {
+  const location = useLocation();
+
+  const isAdminRoute = location.pathname.startsWith('/admin');
+
   return (
     <>
-      <Navbar />
+      {isAdminRoute ? <AdminNavbar /> : <Navbar />}
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />

@@ -82,3 +82,42 @@
     font-size: 0.9rem;
     color: var(--gray-color);
   }
+
+/* Notificación base */
+.notification {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  padding: 15px 20px;
+  border-radius: 5px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  z-index: 1000;
+  font-size: 1rem;
+  font-weight: bold;
+  animation: fadeOut 3s forwards;
+}
+
+/* Notificación de éxito */
+.notification-success {
+  background: #4caf50;
+  color: white;
+}
+
+/* Notificación de error */
+.notification-error {
+  background-color: #f44336;
+  color: white;
+}
+
+@keyframes fadeOut {
+  0% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+}

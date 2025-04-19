@@ -24,7 +24,8 @@ function Home() {
       <HeroSection />
       <VideoSection /> {/* Agregar el componente de video aquí */}
       
-      <h2>Productos Destacados</h2>
+      {/* Eliminado Productos Destacados */}
+      {/* <h2>Productos Destacados</h2>
       <div className="product-list">
         {products.length > 0 ? (
           products.map((product) => (
@@ -33,7 +34,7 @@ function Home() {
         ) : (
           <p>No se encontraron productos.</p>
         )}
-      </div>
+      </div> */}
 
       <Brands />
     </div>
