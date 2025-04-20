@@ -1,88 +1,12 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import './NotificationManager.css';
 
-const useNotificationManager = () => {
-  const [notifications, setNotifications] = useState([]);
-  const [isPanelOpen, setIsPanelOpen] = useState(false);
-  const [error, setError] = useState(null);
+// Added a default empty object for props to prevent undefined errors
+const NotificationManager = (props = {}) => {
+  const notifications = useMemo(() => props.notifications || [], [props.notifications]);
+  const [localNotifications, setNotifications] = useState(notifications);
 
-  const addNotification = (message, type, duration = 5000) => {
-    const id = Date.now();
-    const newNotification = {
-      id,
-      message,
-      type,
-      createdAt: new Date(),
-      duration
-    };
-
-    setNotifications((prev) => [newNotification, ...prev]);
-
-    if (duration > 0) {
-      setTimeout(() => {
-        // Verificar si la notificación aún existe antes de intentar eliminarla
-        const exists = notifications.some((notification) => notification.id === id);
-        if (exists) {
-          deleteNotification(id);
-        } else {
-          console.warn(`La notificación con ID ${id} ya no existe en el estado actual.`);
-        }
-      }, duration);
-    }
-  };
-
-  const deleteNotificationFromDB = async (id) => {
-    try {
-      const response = await fetch(`http://localhost/schizotactical/backend/eliminar_notificacion.php`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ id }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Error al eliminar la notificación en la base de datos');
-      }
-
-      const data = await response.json();
-      if (!data.success) {
-        throw new Error(data.message || 'Error desconocido al eliminar la notificación');
-      }
-
-      console.log(`Notificación con ID ${id} eliminada del backend con éxito.`);
-    } catch (error) {
-      console.error('Error al eliminar la notificación:', error);
-    }
-  };
-
-  const deleteNotification = (id) => {
-    console.log(`Intentando eliminar notificación con ID: ${id}`); // Log para depuración
-
-    // Verificar si la notificación existe en el estado actual
-    const notificationExists = notifications.some((notification) => notification.id === id);
-    if (!notificationExists) {
-      console.warn(`La notificación con ID ${id} no existe en el estado actual.`);
-      return;
-    }
-
-    // Eliminar del frontend
-    setNotifications((prev) => prev.filter((notification) => notification.id !== id));
-
-    // Intentar eliminar del backend
-    deleteNotificationFromDB(id)
-      .then(() => {
-        console.log(`Notificación con ID ${id} eliminada del backend con éxito.`);
-      })
-      .catch((error) => {
-        console.error(`Error al eliminar la notificación con ID ${id} del backend:`, error);
-      });
-  };
-
-  const toggleNotificationPanel = () => {
-    setIsPanelOpen(prev => !prev);
-  };
-
+  // Re-added the 'refreshNotifications' function to fix the runtime error
   const refreshNotifications = async () => {
     try {
       const response = await fetch('http://localhost/schizotactical/backend/notificaciones.php', {
@@ -92,60 +16,49 @@ const useNotificationManager = () => {
         throw new Error('Error fetching notifications');
       }
       const data = await response.json();
-  
-      setNotifications((prev) => {
-        const backendNotifications = data.data || [];
-        const mergedNotifications = [...backendNotifications];
-  
-        // Ensure no duplicate notifications by ID
-        const uniqueNotifications = mergedNotifications.filter(
-          (notification, index, self) =>
-            index === self.findIndex((n) => n.id === notification.id)
-        );
-  
-        return uniqueNotifications;
-      });
+      setNotifications(Array.isArray(data.data) ? data.data : []);
     } catch (error) {
       console.error('Error refreshing notifications:', error);
+      setNotifications([]);
     }
   };
 
   useEffect(() => {
-    const fetchNotifications = async () => {
-      try {
-        const response = await fetch('http://localhost/schizotactical/backend/notificaciones.php', {
-          credentials: 'include',
-        });
-        if (!response.ok) throw new Error('Error fetching notifications');
-  
-        const data = await response.json();
-        setNotifications(Array.isArray(data.data) ? data.data : []);
-      } catch (error) {
-        console.error('Error fetching notifications:', error);
-        setNotifications([]);
-      }
-    };
-  
-    // Ejecuta una vez al montar
-    fetchNotifications();
-  
-    // Ejecuta cada 5 segundos
-    const interval = setInterval(fetchNotifications, 5000);
-  
-    // Limpia el intervalo al desmontar
+    refreshNotifications();
+    const interval = setInterval(refreshNotifications, 5000);
     return () => clearInterval(interval);
   }, []);
 
-  return {
-    notifications,
-    isPanelOpen,
-    error,
-    addNotification,
-    deleteNotification,
-    toggleNotificationPanel,
-    clearError: () => setError(null),
-    refreshNotifications // Added refreshNotifications to the return object
-  };
+  useEffect(() => {
+    setNotifications(notifications);
+  }, [notifications]);
+
+  return (
+    <div className="notification-container">
+      {localNotifications.length === 0 ? (
+        <p className="no-notifications">No hay notificaciones</p>
+      ) : (
+        <table className="notification-table">
+          <thead>
+            <tr>
+              <th>Mensaje</th>
+              <th>Tipo</th>
+              <th>Fecha</th>
+            </tr>
+          </thead>
+          <tbody>
+            {localNotifications.map((notification) => (
+              <tr key={notification.id}>
+                <td>{notification.message}</td>
+                <td>{notification.type}</td>
+                <td>{new Date(notification.createdAt).toLocaleString()}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
+  );
 };
 
 const fetchNotifications = async () => {
@@ -174,14 +87,6 @@ const NotificationPanel = ({
 }) => {
   if (!isOpen) return null;
 
-  const handleDelete = async (id) => {
-    try {
-      await deleteNotification(id);
-    } catch (err) {
-      console.error('Error al eliminar notificación:', err);
-    }
-  };
-
   return (
     <div className="notification-overlay" onClick={onClose}>
       <div className="notification-center" onClick={e => e.stopPropagation()}>
@@ -201,26 +106,24 @@ const NotificationPanel = ({
           {notifications.length === 0 ? (
             <p className="no-notifications">No hay notificaciones</p>
           ) : (
-            notifications.map((notification) => (
-              <div 
-                key={notification.id} 
-                className={`notification notification-${notification.type}`}
-              >
-                <div className="notification-content">
-                  <span>{notification.message}</span>
-                  <span className="notification-time">
-                    {new Date(notification.createdAt).toLocaleTimeString()}
-                  </span>
-                </div>
-                <button
-                  className="delete-button"
-                  onClick={() => handleDelete(notification.id)}
-                  aria-label="Eliminar notificación"
-                >
-                  ×
-                </button>
-              </div>
-            ))
+            <table className="notification-table">
+              <thead>
+                <tr>
+                  <th>Mensaje</th>
+                  <th>Tipo</th>
+                  <th>Fecha</th>
+                </tr>
+              </thead>
+              <tbody>
+                {notifications.map((notification) => (
+                  <tr key={notification.id}>
+                    <td>{notification.message}</td>
+                    <td>{notification.type}</td>
+                    <td>{new Date(notification.created_at).toLocaleString()}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           )}
         </div>
       </div>
@@ -228,6 +131,44 @@ const NotificationPanel = ({
   );
 };
 
-// Ensure `useNotificationManager` is exported correctly
-export default useNotificationManager;
+// Added a custom hook to export refreshNotifications
+export const useNotificationManager = () => {
+  const refreshNotifications = async () => {
+    try {
+      const response = await fetch('http://localhost/schizotactical/backend/notificaciones.php', {
+        credentials: 'include',
+      });
+      if (!response.ok) {
+        throw new Error('Error fetching notifications');
+      }
+      const data = await response.json();
+      return Array.isArray(data.data) ? data.data : [];
+    } catch (error) {
+      console.error('Error refreshing notifications:', error);
+      return [];
+    }
+  };
+
+  // Simplified `addNotification` to only send `message` and `type` fields
+  const addNotification = async (message, type) => {
+    try {
+      const response = await fetch('http://localhost/schizotactical/backend/guardar_notificacion.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message, type }),
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error(`Error HTTP: ${response.status}`);
+      }
+    } catch (error) {
+      console.error('Error adding notification:', error);
+    }
+  };
+
+  return { refreshNotifications, addNotification };
+};
+
+export default NotificationManager;
 export { NotificationPanel, fetchNotifications };

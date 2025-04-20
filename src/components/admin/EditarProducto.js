@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import './EditarProducto.css';
-import useNotificationManager from './NotificationManager';
+import { useNotificationManager } from './NotificationManager';
 
 function EditarProducto() {
   const { id } = useParams();
@@ -123,7 +123,6 @@ function EditarProducto() {
       console.log('Respuesta de edición:', data);
 
       if (data.success) {
-        addNotification('Producto actualizado con éxito', 'success');
         navigate('/admin/productos');
       } else {
         addNotification(data.message || 'Error al actualizar el producto', 'error');

@@ -165,6 +165,33 @@
     font-size: 0.85rem;
 }
 
+/* Add styles for a table-like notification display */
+.notification-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 1rem;
+  text-align: left;
+}
+
+.notification-table th, .notification-table td {
+  border: 1px solid #ddd;
+  padding: 8px;
+}
+
+.notification-table th {
+  background-color: #f4f4f4;
+  font-weight: bold;
+}
+
+.notification-table tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+.notification-table tr:hover {
+  background-color: #f1f1f1;
+}
+
 /* **Media Queries para Responsividad** */
 
 /* Para pantallas más pequeñas (móviles) */
