@@ -47,8 +47,8 @@
 
 .notification-header h3 {
     margin: 0;
-    font-size: 1rem; /* Tamaño de fuente más moderado */
     font-weight: 600; /* Un poco más de énfasis */
+    text-align: center;
 }
 
 .close-button {

@@ -1,10 +1,20 @@
 // src/components/admin/AdminLayout.js
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import './AdminLayout.css'; // Asegúrate de tener un archivo CSS para estilos
+import useNotificationManager from './NotificationManager';
 
 function AdminLayout({ children }) {
   const navigate = useNavigate();
+  const { refreshNotifications } = useNotificationManager();
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      refreshNotifications(); // Call refreshNotifications from the hook
+    }, 5000); // Refresh every 5 seconds
+
+    return () => clearInterval(interval); // Cleanup interval on unmount
+  }, [refreshNotifications]);
 
   const handleLogout = () => {
     // Limpiar ambos sistemas de autenticación

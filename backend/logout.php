@@ -5,6 +5,7 @@ session_start();
 // Configuración CORS (igual que en login.php)
 $allowedOrigins = [
     'http://localhost:3000',
+    'http://localhost:3001', // Added localhost:3001 to allowed origins
     'http://localhost:3002',
     'http://localhost:3003'
 ];

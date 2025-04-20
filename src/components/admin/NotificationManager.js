@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import './NotificationManager.css';
 
 const useNotificationManager = () => {
@@ -16,11 +16,17 @@ const useNotificationManager = () => {
       duration
     };
 
-    setNotifications(prev => [newNotification, ...prev]);
+    setNotifications((prev) => [newNotification, ...prev]);
 
     if (duration > 0) {
       setTimeout(() => {
-        deleteNotification(id);
+        // Verificar si la notificación aún existe antes de intentar eliminarla
+        const exists = notifications.some((notification) => notification.id === id);
+        if (exists) {
+          deleteNotification(id);
+        } else {
+          console.warn(`La notificación con ID ${id} ya no existe en el estado actual.`);
+        }
       }, duration);
     }
   };
@@ -77,6 +83,59 @@ const useNotificationManager = () => {
     setIsPanelOpen(prev => !prev);
   };
 
+  const refreshNotifications = async () => {
+    try {
+      const response = await fetch('http://localhost/schizotactical/backend/notificaciones.php', {
+        credentials: 'include',
+      });
+      if (!response.ok) {
+        throw new Error('Error fetching notifications');
+      }
+      const data = await response.json();
+  
+      setNotifications((prev) => {
+        const backendNotifications = data.data || [];
+        const mergedNotifications = [...backendNotifications];
+  
+        // Ensure no duplicate notifications by ID
+        const uniqueNotifications = mergedNotifications.filter(
+          (notification, index, self) =>
+            index === self.findIndex((n) => n.id === notification.id)
+        );
+  
+        return uniqueNotifications;
+      });
+    } catch (error) {
+      console.error('Error refreshing notifications:', error);
+    }
+  };
+
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      try {
+        const response = await fetch('http://localhost/schizotactical/backend/notificaciones.php', {
+          credentials: 'include',
+        });
+        if (!response.ok) throw new Error('Error fetching notifications');
+  
+        const data = await response.json();
+        setNotifications(Array.isArray(data.data) ? data.data : []);
+      } catch (error) {
+        console.error('Error fetching notifications:', error);
+        setNotifications([]);
+      }
+    };
+  
+    // Ejecuta una vez al montar
+    fetchNotifications();
+  
+    // Ejecuta cada 5 segundos
+    const interval = setInterval(fetchNotifications, 5000);
+  
+    // Limpia el intervalo al desmontar
+    return () => clearInterval(interval);
+  }, []);
+
   return {
     notifications,
     isPanelOpen,
@@ -84,10 +143,26 @@ const useNotificationManager = () => {
     addNotification,
     deleteNotification,
     toggleNotificationPanel,
-    clearError: () => setError(null)
+    clearError: () => setError(null),
+    refreshNotifications // Added refreshNotifications to the return object
   };
 };
 
+const fetchNotifications = async () => {
+  try {
+    const response = await fetch('http://localhost/schizotactical/backend/notificaciones.php', {
+      credentials: 'include',
+    });
+    if (!response.ok) {
+      throw new Error('Error fetching notifications');
+    }
+    const data = await response.json();
+    return data.data || [];
+  } catch (error) {
+    console.error('Error fetching notifications:', error);
+    return [];
+  }
+};
 
 const NotificationPanel = ({
   notifications,
@@ -153,5 +228,6 @@ const NotificationPanel = ({
   );
 };
 
+// Ensure `useNotificationManager` is exported correctly
 export default useNotificationManager;
-export { NotificationPanel };
+export { NotificationPanel, fetchNotifications };

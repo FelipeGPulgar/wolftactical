@@ -27,6 +27,11 @@ const AdminNavbar = () => {
     };
 
     fetchNotifications();
+
+    // Fetch notifications every 5 seconds
+    const interval = setInterval(fetchNotifications, 2000);
+
+    return () => clearInterval(interval); // Cleanup interval on unmount
   }, []);
 
   const toggleNotificationCenter = () => {

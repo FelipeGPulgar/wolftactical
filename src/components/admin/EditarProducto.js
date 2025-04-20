@@ -18,7 +18,11 @@ function EditarProducto() {
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  // eslint-disable-next-line no-unused-vars
+  const [notifications, setNotifications] = useState([]);
 
+  // Removed incorrect usage of `refreshNotifications`
+  // eslint-disable-next-line no-unused-vars
   const { addNotification } = useNotificationManager();
 
   useEffect(() => {
@@ -59,6 +63,25 @@ function EditarProducto() {
 
     cargarProducto();
   }, [id]);
+
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      try {
+        const response = await fetch('http://localhost/schizotactical/backend/notificaciones.php', {
+          credentials: 'include',
+        });
+        if (!response.ok) {
+          throw new Error('Error fetching notifications');
+        }
+        const data = await response.json();
+        setNotifications(data.data || []);
+      } catch (error) {
+        console.error('Error fetching notifications:', error);
+      }
+    };
+
+    fetchNotifications();
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
