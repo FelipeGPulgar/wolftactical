@@ -2,7 +2,7 @@
 session_start();
 
 // Configuración de CORS
-$allowed_origins = ['http://localhost:3000', 'http://localhost:3001'];
+$allowed_origins = ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002', 'http://localhost:3003'];
 
 if (isset($_SERVER['HTTP_ORIGIN']) && in_array($_SERVER['HTTP_ORIGIN'], $allowed_origins)) {
     header("Access-Control-Allow-Origin: {$_SERVER['HTTP_ORIGIN']}");

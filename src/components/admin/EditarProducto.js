@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import './EditarProducto.css';
-import notificationBellActive from '../../Images/notification-bell-active.svg';
-import notificationBellInactive from '../../Images/notification-bell-inactive.svg';
+import useNotificationManager from './NotificationManager';
 
 function EditarProducto() {
   const { id } = useParams();
@@ -19,23 +18,14 @@ function EditarProducto() {
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  // eslint-disable-next-line no-unused-vars
-  const [notifications, setNotifications] = useState([]);
 
-  const addNotification = (message, type) => {
-    const id = Date.now();
-    setNotifications(prev => [...prev, { id, message, type }]);
-    setTimeout(() => {
-      setNotifications(prev => prev.filter(notification => notification.id !== id));
-    }, 120000); // 2 minutes
-  };
+  const { addNotification } = useNotificationManager();
 
   useEffect(() => {
     const cargarProducto = async () => {
       try {
-        // Ensure the URL is correct and the backend file exists
         const response = await fetch(`http://localhost/schizotactical/backend/get_products.php?id=${id}`, {
-          credentials: 'include' // Keep this if your backend requires credentials
+          credentials: 'include'
         });
 
         if (!response.ok) {
@@ -96,7 +86,6 @@ function EditarProducto() {
     }
 
     try {
-      // Ensure the URL is correct and the backend file exists
       const response = await fetch('http://localhost/schizotactical/backend/editar_producto.php', {
         method: 'POST',
         credentials: 'include',
@@ -112,10 +101,6 @@ function EditarProducto() {
 
       if (data.success) {
         addNotification('Producto actualizado con éxito', 'success');
-        document.querySelector('.notification-bell img').src = notificationBellActive; // Cambiar imagen a activa
-        setTimeout(() => {
-          document.querySelector('.notification-bell img').src = notificationBellInactive; // Volver a inactiva después de 2 minutos
-        }, 120000);
         navigate('/admin/productos');
       } else {
         addNotification(data.message || 'Error al actualizar el producto', 'error');
@@ -140,19 +125,44 @@ function EditarProducto() {
 
       <form onSubmit={handleSubmit}>
         <label>Nombre</label>
-        <input type="text" name="nombre" value={producto.nombre} onChange={handleChange} required />
+        <input 
+          type="text" 
+          name="nombre" 
+          value={producto.nombre} 
+          onChange={handleChange} 
+          required 
+        />
 
         <label>Modelo</label>
-        <input type="text" name="modelo" value={producto.modelo} onChange={handleChange} />
+        <input 
+          type="text" 
+          name="modelo" 
+          value={producto.modelo} 
+          onChange={handleChange} 
+        />
 
         <label>Categoría</label>
-        <input type="text" name="categoria" value={producto.categoria} onChange={handleChange} />
+        <input 
+          type="text" 
+          name="categoria" 
+          value={producto.categoria} 
+          onChange={handleChange} 
+        />
 
         <label>Subcategoría</label>
-        <input type="text" name="subcategoria" value={producto.subcategoria} onChange={handleChange} />
+        <input 
+          type="text" 
+          name="subcategoria" 
+          value={producto.subcategoria} 
+          onChange={handleChange} 
+        />
 
         <label>Stock</label>
-        <select name="stock_option" value={producto.stock_option} onChange={handleChange}>
+        <select 
+          name="stock_option" 
+          value={producto.stock_option} 
+          onChange={handleChange}
+        >
           <option value="preorder">Preorden</option>
           <option value="stock">En stock</option>
         </select>
@@ -181,7 +191,11 @@ function EditarProducto() {
         />
 
         <label>Subir nueva imagen</label>
-        <input type="file" accept="image/*" onChange={handleFileChange} />
+        <input 
+          type="file" 
+          accept="image/*" 
+          onChange={handleFileChange} 
+        />
 
         <button type="submit">Actualizar Producto</button>
       </form>

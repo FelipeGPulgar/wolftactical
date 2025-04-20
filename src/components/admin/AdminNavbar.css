@@ -40,13 +40,15 @@
 }
 
 .notification {
+  margin-bottom: 10px; /* Add spacing between notifications */
   padding: 10px;
-  border-bottom: 1px solid #ddd;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  background-color: #fff;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-radius: 8px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .notification:last-child {
@@ -117,16 +119,16 @@
 
 /* Estilo para el centro de notificaciones */
 .notification-center {
-  position: fixed;
-  top: 20%;
-  right: 20%;
-  width: 300px;
-  background-color: #fff;
-  border: 1px solid #ccc;
+  display: flex;
+  flex-direction: column; /* Stack notifications vertically */
+  gap: 10px; /* Add spacing between notifications */
+  background-color: #f4f4f4; /* Light gray background for better visibility */
+  border: 1px solid #ccc; /* Subtle border */
   border-radius: 8px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-  z-index: 1000;
   padding: 16px;
+  max-height: 400px;
+  overflow-y: auto;
 }
 
 .notification-center .notification {
@@ -154,7 +156,7 @@
 }
 
 .notification-center .delete-button {
-  background-color: #e74c3c; /* Rojo más vibrante */
+  background-color: #e74c3c; /* Vibrant red for delete button */
   color: white;
   border: none;
   border-radius: 5px;
@@ -163,10 +165,16 @@
 }
 
 .notification-center .delete-button:hover {
-  background-color: #c0392b;
+  background-color: #c0392b; /* Darker red on hover */
 }
 
 .notification-header {
+  background-color: #333; /* Dark background for header */
+  color: white; /* White text for contrast */
+  padding: 10px;
+  border-radius: 5px 5px 0 0;
+  font-size: 1.2rem;
+  text-align: center;
   display: flex;
   justify-content: space-between;
   align-items: center;
