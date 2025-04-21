@@ -50,10 +50,12 @@ function Footer() {
           </ul>
         </div>
         <div className="footer-section">
-          <h3>Contact Us</h3>
+          <h3>Contactanos</h3>
           <p>Email: info@schizotactical.com</p>
-          <p>Phone: +1 (555) 123-4567</p>
-          <p>Address: 123 Tactical Way, City, State, Zip</p>
+          <p>Telefonos: +1 (555) 123-4567</p>
+          <p>Telefonos: +1 (555) 123-4567</p>
+          <p>Telefonos: +1 (555) 123-4567</p>
+          <p>Direccion: 123 Tactical Way, City, State, Zip</p>
         </div>
         <div className="footer-section">
           <h3>Siguenos En</h3>

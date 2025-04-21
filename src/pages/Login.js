@@ -50,7 +50,7 @@ function Login() {
     return (
         <div className="login-container">
             <form className="login-form" onSubmit={handleSubmit}>
-                <h2>Panel de Administración</h2>
+                <h2>Inicio De Sesión</h2>
                 <div className="form-group">
                     <label>Usuario:</label>
                     <input

@@ -4,7 +4,7 @@ import "./Brands.css";
 function Brands() {
   return (
     <section className="brands">
-      <h2>Shop by Brand</h2>
+      <h2>Nuestros Socios</h2>
       <div className="brand-list">
         <div className="brand">SchizoTactical</div>
         <div className="brand">HESCO</div>
