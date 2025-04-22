@@ -125,12 +125,12 @@ function Navbar() {
           className="dropdown-container"
         >
           <Link to="/tactical-gear" onClick={toggleMenu}>
-            Tactical Gear
+            Chalecos
           </Link>
           <ul className={`dropdown ${isTacticalGearDropdownOpen ? "active" : ""}`}>
             <li>
               <Link to="/plate-carriers" onClick={toggleMenu}>
-                Plate Carriers
+                placas
               </Link>
             </li>
             <li>
@@ -140,7 +140,7 @@ function Navbar() {
             </li>
             <li>
               <Link to="/belts" onClick={toggleMenu}>
-                Belts
+                
               </Link>
             </li>
           </ul>
