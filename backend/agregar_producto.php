@@ -1,8 +1,10 @@
 <?php
-// Habilitar CORS dinámico para coincidir con el origen de la solicitud
+// Update the CORS configuration to dynamically allow the origin of the incoming request
 $allowed_origins = ['http://localhost:3000', 'http://localhost:3001'];
 if (isset($_SERVER['HTTP_ORIGIN']) && in_array($_SERVER['HTTP_ORIGIN'], $allowed_origins)) {
     header("Access-Control-Allow-Origin: {$_SERVER['HTTP_ORIGIN']}");
+} else {
+    header("Access-Control-Allow-Origin: null"); // Default to null if the origin is not allowed
 }
 header("Access-Control-Allow-Methods: POST, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type, Authorization");

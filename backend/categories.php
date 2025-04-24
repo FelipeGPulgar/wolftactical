@@ -1,6 +1,11 @@
 <?php
-// Habilitar CORS para solicitudes específicas
-header("Access-Control-Allow-Origin: http://localhost:3000"); // Cambiado para coincidir con el origen correcto
+// Update the CORS configuration to dynamically allow the origin of the incoming request
+$allowed_origins = ['http://localhost:3000', 'http://localhost:3001'];
+if (isset($_SERVER['HTTP_ORIGIN']) && in_array($_SERVER['HTTP_ORIGIN'], $allowed_origins)) {
+    header("Access-Control-Allow-Origin: {$_SERVER['HTTP_ORIGIN']}");
+} else {
+    header("Access-Control-Allow-Origin: null"); // Default to null if the origin is not allowed
+}
 header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type, Authorization");
 header("Access-Control-Allow-Credentials: true");
@@ -8,7 +13,7 @@ header("Access-Control-Allow-Credentials: true");
 header('Content-Type: application/json');
 require_once 'db.php';
 
-// Manejo de errores para solicitudes OPTIONS
+// Handle preflight OPTIONS request
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     exit;
