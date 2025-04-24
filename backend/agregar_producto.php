@@ -1,75 +1,76 @@
 <?php
-session_start();
+// Habilitar CORS dinámico para coincidir con el origen de la solicitud
+$allowed_origins = ['http://localhost:3000', 'http://localhost:3001'];
+if (isset($_SERVER['HTTP_ORIGIN']) && in_array($_SERVER['HTTP_ORIGIN'], $allowed_origins)) {
+    header("Access-Control-Allow-Origin: {$_SERVER['HTTP_ORIGIN']}");
+}
+header("Access-Control-Allow-Methods: POST, OPTIONS");
+header("Access-Control-Allow-Headers: Content-Type, Authorization");
+header("Access-Control-Allow-Credentials: true");
 
-// Verifica si el usuario está logueado como administrador
-if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true) {
-    header('Location: login.php');
+// Manejo de errores para solicitudes OPTIONS
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
     exit;
 }
 
-include('conexion.php');  // Asegúrate de incluir el archivo de conexión
+require_once 'db.php';
 
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    // Recibir los datos del formulario
-    $nombre = $_POST['nombre'];
-    $modelo = $_POST['modelo'];
-    $categoria = $_POST['categoria'];
-    $subcategoria = $_POST['subcategoria'];
-    $stock_option = $_POST['stock_option'];
-    $stock_quantity = $stock_option == 'instock' ? $_POST['stock_quantity'] : NULL;
-    $precio = $_POST['precio'];
-    $imagen = $_FILES['imagen']['name']; // Aquí se recibe la imagen principal
+if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+    $name = $_POST['name'] ?? null;
+    $model = $_POST['model'] ?? null;
+    $main_category = $_POST['main_category'] ?? null;
+    $subcategory = $_POST['subcategory'] ?? null;
+    $stock_option = $_POST['stock_option'] ?? 'preorder';
+    $stock_quantity = $_POST['stock_quantity'] ?? null;
+    $price = $_POST['price'] ?? null;
+    $main_image = $_FILES['main_image'] ?? null;
+    $additional_images = [$_FILES['image_1'] ?? null, $_FILES['image_2'] ?? null];
 
-    // Subir la imagen
-    move_uploaded_file($_FILES['imagen']['tmp_name'], 'imagenes/' . $imagen);
-
-    // Insertar en la base de datos
-    $sql = "INSERT INTO products (name, model, category, subcategory, stock_option, stock_quantity, price, main_image) 
-            VALUES ('$nombre', '$modelo', '$categoria', '$subcategoria', '$stock_option', '$stock_quantity', '$precio', '$imagen')";
-    if (mysqli_query($conn, $sql)) {
-        echo "Producto agregado con éxito.";
-
-        // Insertar notificación en la tabla notifications
-        $notificationSql = "INSERT INTO notifications (message, type) VALUES (?, ?)";
-        $stmtNotification = $conn->prepare($notificationSql);
-        $stmtNotification->bind_param("ss", $message, $type);
-        $message = "Producto agregado: $nombre";
-        $type = "success";
-        $stmtNotification->execute();
-    } else {
-        echo "Error: " . $sql . "<br>" . mysqli_error($conn);
+    if (empty($name) || empty($price) || empty($main_image)) {
+        echo json_encode(['success' => false, 'message' => 'Todos los campos son requeridos.']);
+        exit();
     }
+
+    // Procesar imagen principal
+    $upload_dir = __DIR__ . '/uploads/';
+    if (!is_dir($upload_dir)) {
+        if (!mkdir($upload_dir, 0777, true)) {
+            error_log('Error al crear el directorio de carga: ' . $upload_dir);
+            echo json_encode(['success' => false, 'message' => 'Error al crear el directorio de carga. Verifica los permisos del servidor.']);
+            exit();
+        }
+    }
+
+    $main_image_path = $upload_dir . basename($main_image['name']);
+    if (!move_uploaded_file($main_image['tmp_name'], $main_image_path)) {
+        echo json_encode(['success' => false, 'message' => 'Error al cargar la imagen principal. Verifica los permisos del directorio.']);
+        exit();
+    }
+
+    // Insertar producto en la base de datos
+    $sql = "INSERT INTO products (name, model, category, subcategory, stock_option, stock_quantity, price, main_image) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute([$name, $model, $main_category, $subcategory, $stock_option, $stock_quantity, $price, basename($main_image['name'])]);
+
+    $product_id = $pdo->lastInsertId();
+
+    // Procesar imágenes adicionales
+    foreach ($additional_images as $index => $image) {
+        if ($image) {
+            $image_path = $upload_dir . basename($image['name']);
+            if (move_uploaded_file($image['tmp_name'], $image_path)) {
+                $image_order = $index + 1;
+                $sql = "INSERT INTO product_images (product_id, image_url, image_order) VALUES (?, ?, ?)";
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute([$product_id, basename($image['name']), $image_order]);
+            }
+        }
+    }
+
+    echo json_encode(['success' => true, 'message' => 'Producto agregado con éxito']);
+} else {
+    http_response_code(405);
+    echo json_encode(['success' => false, 'message' => 'Método no permitido']);
 }
 ?>
-
-<!-- Formulario para agregar productos -->
-<form method="POST" enctype="multipart/form-data">
-    <label for="nombre">Nombre:</label>
-    <input type="text" name="nombre" required><br>
-
-    <label for="modelo">Modelo:</label>
-    <input type="text" name="modelo" required><br>
-
-    <label for="categoria">Categoría:</label>
-    <input type="text" name="categoria" required><br>
-
-    <label for="subcategoria">Subcategoría:</label>
-    <input type="text" name="subcategoria" required><br>
-
-    <label for="stock_option">Stock:</label>
-    <select name="stock_option" required>
-        <option value="preorder">Por encargo</option>
-        <option value="instock">En stock</option>
-    </select><br>
-
-    <label for="stock_quantity">Cantidad en stock:</label>
-    <input type="number" name="stock_quantity"><br>
-
-    <label for="precio">Precio:</label>
-    <input type="text" name="precio" required><br>
-
-    <label for="imagen">Imagen principal:</label>
-    <input type="file" name="imagen" accept="image/*" required><br>
-
-    <input type="submit" value="Agregar Producto">
-</form>

@@ -14,7 +14,13 @@ function Home() {
     // Llamada a la API para obtener los productos
     fetch('http://localhost/schizotactical/backend/get_products.php')
       .then(response => response.json())
-      .then(data => console.log('Productos obtenidos:', data))
+      .then(data => {
+        if (data.success) {
+          console.log('Productos obtenidos:', data.data);
+        } else {
+          console.error('Error en la respuesta de la API:', data);
+        }
+      })
       .catch(error => console.error('Error al obtener productos:', error));
   }, []);
 

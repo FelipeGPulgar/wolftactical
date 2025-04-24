@@ -1,37 +1,23 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import axios from "axios";
 import "./Navbar.css";
 
 function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
-  const [isBodyArmorDropdownOpen, setIsBodyArmorDropdownOpen] = useState(false);
-  const [isTacticalGearDropdownOpen, setIsTacticalGearDropdownOpen] = useState(false);
-  const [isDealsDropdownOpen, setIsDealsDropdownOpen] = useState(false);
+  const [categories, setCategories] = useState([]);
+
+  useEffect(() => {
+    // Fetch categories and subcategories from the backend
+    axios.get("http://localhost/schizotactical/backend/categories.php").then((response) => {
+      setCategories(response.data);
+    }).catch((error) => {
+      console.error("Error fetching categories:", error);
+    });
+  }, []);
 
   const toggleMenu = () => {
     setIsOpen(!isOpen);
-  };
-
-  const handleBodyArmorMouseEnter = () => {
-    setIsBodyArmorDropdownOpen(true);
-  };
-
-  const handleBodyArmorMouseLeave = () => {
-    setIsBodyArmorDropdownOpen(false);
-  };
-  const handleTacticalGearMouseEnter = () => {
-    setIsTacticalGearDropdownOpen(true);
-  };
-
-  const handleTacticalGearMouseLeave = () => {
-    setIsTacticalGearDropdownOpen(false);
-  };
-  const handleDealsMouseEnter = () => {
-    setIsDealsDropdownOpen(true);
-  };
-
-  const handleDealsMouseLeave = () => {
-    setIsDealsDropdownOpen(false);
   };
 
   return (
@@ -47,105 +33,26 @@ function Navbar() {
       </div>
 
       <ul className={`nav-links ${isOpen ? "active" : ""}`}>
-        <li
-          onMouseEnter={handleDealsMouseEnter}
-          onMouseLeave={handleDealsMouseLeave}
-          className="dropdown-container"
-        >
-          <Link to="/deals" onClick={toggleMenu}>
-            Deals
-          </Link>
-          <ul className={`dropdown ${isDealsDropdownOpen ? "active" : ""}`}>
-            <li>
-              <Link to="/deals/holsters" onClick={toggleMenu}>
-                Holsters Deals
-              </Link>
-            </li>
-            <li>
-              <Link to="/deals/body-armor" onClick={toggleMenu}>
-                Body Armor Deals
-              </Link>
-            </li>
-            <li>
-              <Link to="/deals/tactical-gear" onClick={toggleMenu}>
-                Tactical Gear Deals
-              </Link>
-            </li>
-          </ul>
-        </li>
-        <li>
-          <Link to="/holsters" onClick={toggleMenu}>
-            Holsters
-          </Link>
-        </li>
-        <li>
-          <Link to="/rifle" onClick={toggleMenu}>
-            Rifle
-          </Link>
-        </li>
-        <li>
-          <Link to="/pistol" onClick={toggleMenu}>
-            Pistol
-          </Link>
-        </li>
-        <li
-          onMouseEnter={handleBodyArmorMouseEnter}
-          onMouseLeave={handleBodyArmorMouseLeave}
-          className="dropdown-container"
-        >
-          <Link to="/body-armor" onClick={toggleMenu}>
-            Body Armor
-          </Link>
-          <ul className={`dropdown ${isBodyArmorDropdownOpen ? "active" : ""}`}>
-            <li>
-              <Link to="/body-armor/vests" onClick={toggleMenu}>
-                Vests
-              </Link>
-            </li>
-            <li>
-              <Link to="/body-armor/plates" onClick={toggleMenu}>
-                Plates
-              </Link>
-            </li>
-            <li>
-              <Link to="/helmets" onClick={toggleMenu}>
-                Helmets
-              </Link>
-            </li>
-          </ul>
-        </li>
-        <li>
-          <Link to="/night-vision" onClick={toggleMenu}>
-            Night Vision
-          </Link>
-        </li>
-        <li
-          onMouseEnter={handleTacticalGearMouseEnter}
-          onMouseLeave={handleTacticalGearMouseLeave}
-          className="dropdown-container"
-        >
-          <Link to="/tactical-gear" onClick={toggleMenu}>
-            Chalecos
-          </Link>
-          <ul className={`dropdown ${isTacticalGearDropdownOpen ? "active" : ""}`}>
-            <li>
-              <Link to="/plate-carriers" onClick={toggleMenu}>
-                placas
-              </Link>
-            </li>
-            <li>
-              <Link to="/pouches" onClick={toggleMenu}>
-                Pouches
-              </Link>
-            </li>
-            <li>
-              <Link to="/belts" onClick={toggleMenu}>
-                
-              </Link>
-            </li>
-          </ul>
-        </li>
+        {categories.map((category) => (
+          <li key={category.id} className="dropdown-container">
+            <Link to={`/${category.name.toLowerCase()}`} onClick={toggleMenu}>
+              {category.name}
+            </Link>
+            {category.subcategories && category.subcategories.length > 0 && (
+              <ul className="dropdown">
+                {category.subcategories.map((sub) => (
+                  <li key={sub.id}>
+                    <Link to={`/${category.name.toLowerCase()}/${sub.name.toLowerCase()}`} onClick={toggleMenu}>
+                      {sub.name}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </li>
+        ))}
       </ul>
+
       <div className="nav-actions">
         <div className="search-bar">
           <input type="text" placeholder="Search..." />
