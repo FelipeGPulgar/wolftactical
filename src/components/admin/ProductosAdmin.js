@@ -9,7 +9,7 @@ function ProductosAdmin() {
   const [error, setError] = useState(null);
   const navigate = useNavigate();
 
-  // Cargar productos (sin cambios en lógica)
+  // Cargar productos (sin cambios)
   useEffect(() => {
     const fetchProducts = async () => {
       setLoading(true);
@@ -41,14 +41,14 @@ function ProductosAdmin() {
     fetchProducts();
   }, []);
 
-  // Eliminar producto (sin cambios en lógica)
+  // Eliminar producto (sin cambios)
   const handleDelete = async (id) => {
     if (window.confirm(`¿Estás seguro de eliminar el producto con ID ${id}?`)) {
       try {
         const response = await fetch(
           `http://localhost/schizotactical/backend/eliminar_producto.php?id=${id}`,
           {
-            method: 'GET',
+            method: 'GET', // Considera usar DELETE si tu backend lo soporta
             credentials: 'include'
           }
         );
@@ -124,7 +124,7 @@ function ProductosAdmin() {
                        src={`http://localhost/schizotactical/backend/${product.main_image}`}
                        alt={product.name || 'Producto'}
                        className="product-thumbnail"
-                       onError={(e) => { e.target.style.display = 'none'; }}
+                       onError={(e) => { e.target.style.display = 'none'; }} // Oculta si la imagen no carga
                     />
                   ) : (
                     <span className="no-image">Sin imagen</span>
@@ -139,19 +139,20 @@ function ProductosAdmin() {
                     : 'Por encargo'}
                 </td>
                  <td>
-                   {/* Se cambió == por === */}
                    <span className={`status ${product.is_active === 1 || product.is_active === '1' ? 'status-active' : 'status-inactive'}`}>
                      {product.is_active === 1 || product.is_active === '1' ? 'Activo' : 'Inactivo'}
                    </span>
                  </td>
                 <td className="actions">
+                  {/* --- CORRECCIÓN AQUÍ --- */}
                   <button
-                    onClick={() => navigate(`/admin/productos/editar/${product.id}`)}
+                    onClick={() => navigate(`/admin/editar-producto/${product.id}`)} // Cambiado a 'editar-producto'
                     className="btn-edit"
                     title="Editar Producto"
                   >
                     Editar
                   </button>
+                  {/* ----------------------- */}
                   <button
                     onClick={() => handleDelete(product.id)}
                     className="btn-delete"
