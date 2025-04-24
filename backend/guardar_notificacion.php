@@ -1,89 +1,120 @@
 <?php
-// --- Habilitar CORS dinámico ---
-$allowed_origins = ['http://localhost:3000', 'http://localhost:3002'];
-$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+// --- INICIO: Habilitar errores para depuración ---
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+// --- FIN: Depuración ---
 
+// No necesita session_start() si no valida sesión aquí (depende de tu lógica)
+// session_start();
+
+// --- Configuración CORS Dinámica ---
+$allowed_origins = ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002', 'http://localhost:3003'];
+$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
 if (in_array($origin, $allowed_origins)) {
     header("Access-Control-Allow-Origin: $origin");
-    header("Access-Control-Allow-Credentials: true");
+} else {
+    header("Access-Control-Allow-Origin: http://localhost:3000");
 }
-
 header("Access-Control-Allow-Methods: POST, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type");
+header("Access-Control-Allow-Headers: Content-Type, Authorization"); // Permitir Authorization si es necesario
+header("Access-Control-Allow-Credentials: true"); // Necesario si React envía 'include'
 
-// Preflight
+// --- Manejo OPTIONS (Preflight) ---
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     exit();
 }
 
-// --- Comenzar POST ---
+// --- Establecer Content-Type JSON ---
 header("Content-Type: application/json");
+
+// --- Conexión DB ---
 require_once 'db.php';
 
+// --- Lógica para Guardar Notificación ---
+
+// Asegurarse que sea método POST
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
-    echo json_encode(['success' => false, 'message' => 'Método no permitido']);
-    exit();
+    die(json_encode(['success' => false, 'message' => 'Método no permitido. Se esperaba POST.']));
 }
 
-$json = file_get_contents('php://input');
-$data = json_decode($json, true);
+// Obtener datos del cuerpo JSON
+$inputJSON = file_get_contents('php://input');
+$input = json_decode($inputJSON, TRUE);
 
-$message = $data['message'] ?? null;
-$type = $data['type'] ?? null;
-$product_id = $data['product_id'] ?? null;
-$field_changed = $data['field_changed'] ?? null;
-$old_value = $data['old_value'] ?? null;
-$new_value = $data['new_value'] ?? null;
-
-// --- Validación general ---
-if (!$message || !$type) {
+// Validar JSON
+if (json_last_error() !== JSON_ERROR_NONE) {
     http_response_code(400);
-    echo json_encode(['success' => false, 'message' => 'Faltan campos obligatorios']);
+    die(json_encode(['success' => false, 'message' => 'JSON inválido recibido.']));
+}
+
+// Obtener datos (usando null coalescing operator ??)
+$message = $input['message'] ?? null;
+$type = $input['type'] ?? 'info'; // Default a 'info' si no se especifica
+// Campos opcionales para notificaciones de producto
+$product_id = isset($input['product_id']) ? (int)$input['product_id'] : null;
+$field_changed = $input['field_changed'] ?? null;
+$old_value = $input['old_value'] ?? null;
+$new_value = $input['new_value'] ?? null;
+
+// Validación básica
+if (empty($message)) { // El tipo ya tiene default
+    http_response_code(400);
+    die(json_encode(['success' => false, 'message' => 'El mensaje de la notificación es obligatorio.']));
+}
+
+// Evitar guardar si es un cambio de producto y no hubo cambio real
+if ($product_id && $field_changed && $old_value === $new_value) {
+    // No es un error, simplemente no se guarda
+    echo json_encode([
+        'success' => true, // Indica éxito en la solicitud, aunque no se guardó
+        'message' => 'No se guardó notificación: sin cambio real detectado.',
+        'id' => null // No hay ID nuevo
+    ]);
     exit();
 }
 
-// --- Si es notificación por cambio de producto ---
-if ($product_id && $field_changed && $new_value !== null) {
-
-    // Evita guardar si no hubo cambio real
-    if ($old_value === $new_value) {
-        echo json_encode([
-            'success' => false,
-            'message' => 'No se guardó la notificación porque no hubo cambio real'
-        ]);
-        exit();
+try {
+    // Determinar la consulta SQL basada en si es notificación de producto o general
+    if ($product_id && $field_changed) {
+        $sql = "INSERT INTO notifications (product_id, message, field_changed, old_value, new_value, type, created_at)
+                VALUES (:product_id, :message, :field_changed, :old_value, :new_value, :type, NOW())";
+        $params = [
+            ':product_id' => $product_id,
+            ':message' => $message,
+            ':field_changed' => $field_changed,
+            ':old_value' => $old_value,
+            ':new_value' => $new_value,
+            ':type' => $type
+        ];
+    } else {
+        $sql = "INSERT INTO notifications (message, type, created_at)
+                VALUES (:message, :type, NOW())";
+        $params = [
+            ':message' => $message,
+            ':type' => $type
+        ];
     }
 
-    try {
-        $stmt = $pdo->prepare("INSERT INTO notifications (product_id, message, field_changed, old_value, new_value, type, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())");
-        $stmt->execute([$product_id, $message, $field_changed, $old_value, $new_value, $type]);
+    // Preparar y ejecutar
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
 
-        echo json_encode([
-            'success' => true,
-            'message' => 'Notificación guardada',
-            'id' => $pdo->lastInsertId()
-        ]);
-    } catch (PDOException $e) {
-        http_response_code(500);
-        echo json_encode(['success' => false, 'message' => 'Error al guardar: ' . $e->getMessage()]);
-    }
+    // Respuesta exitosa
+    http_response_code(201); // Creado
+    echo json_encode([
+        'success' => true,
+        'message' => 'Notificación guardada correctamente.',
+        'id' => $pdo->lastInsertId() // Devuelve el ID de la nueva notificación
+    ]);
 
-} else {
-    // Notificación general (sin producto asociado)
-    try {
-        $stmt = $pdo->prepare("INSERT INTO notifications (message, type, created_at) VALUES (?, ?, NOW())");
-        $stmt->execute([$message, $type]);
-
-        echo json_encode([
-            'success' => true,
-            'message' => 'Notificación general guardada',
-            'id' => $pdo->lastInsertId()
-        ]);
-    } catch (PDOException $e) {
-        http_response_code(500);
-        echo json_encode(['success' => false, 'message' => 'Error al guardar: ' . $e->getMessage()]);
-    }
+} catch (PDOException $e) {
+    // Error de base de datos
+    http_response_code(500);
+    error_log("Error al guardar notificación: " . $e->getMessage() . " Data: " . json_encode($input));
+    echo json_encode(['success' => false, 'message' => 'Error interno del servidor al guardar la notificación.']);
 }
+
+exit();
 ?>

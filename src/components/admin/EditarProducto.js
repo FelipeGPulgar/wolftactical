@@ -1,225 +1,308 @@
+// src/components/admin/EditarProducto.js
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import './EditarProducto.css';
-import { useNotificationManager } from './NotificationManager';
+// Asegúrate de que este CSS exista y tenga los estilos adecuados
+import './AgregarProducto.css';
 
 function EditarProducto() {
+  console.log("Renderizando EditarProducto..."); // Log inicial
+
   const { id } = useParams();
+  console.log("ID de useParams:", id); // Log del ID
+
   const navigate = useNavigate();
-  const [producto, setProducto] = useState({
-    nombre: '',
-    modelo: '',
-    categoria: '',
-    subcategoria: '',
-    stock_option: 'preorder',
-    stock_quantity: '',
-    precio: '',
-    imagen: null
+
+  // --- Estados ---
+  const [formData, setFormData] = useState({
+    name: '', model: '', main_category: '', subcategory: '',
+    stock_option: 'preorder', stock_quantity: '', price: '',
+    main_image: null, is_active: 1,
   });
-  const [loading, setLoading] = useState(true);
+  const [currentImageUrl, setCurrentImageUrl] = useState('');
+  const [imagePreview, setImagePreview] = useState(null);
+  const [categories, setCategories] = useState([]);
+  const [subcategories, setSubcategories] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  // eslint-disable-next-line no-unused-vars
-  const [notifications, setNotifications] = useState([]);
 
-  // Removed incorrect usage of `refreshNotifications`
-  // eslint-disable-next-line no-unused-vars
-  const { addNotification } = useNotificationManager();
-
+  // --- Efecto para Cargar Datos Iniciales ---
   useEffect(() => {
-    const cargarProducto = async () => {
-      try {
-        const response = await fetch(`http://localhost/schizotactical/backend/get_products.php?id=${id}`, {
-          credentials: 'include'
-        });
+    // Asegurarse de que tenemos un ID válido antes de hacer fetch
+    if (!id || isNaN(parseInt(id)) || parseInt(id) <= 0) { // Validación más robusta del ID
+        console.error("ID de producto no válido en los parámetros de la URL:", id);
+        setError("ID de producto no válido.");
+        setIsLoading(false);
+        return; // No continuar si no hay ID válido
+    }
 
-        if (!response.ok) {
-          throw new Error(`Error HTTP: ${response.status}`);
+    const fetchData = async () => {
+      setIsLoading(true);
+      setError(null);
+      console.log(`Iniciando fetch para producto ID: ${id}`);
+
+      try {
+        const response = await fetch(`http://localhost/schizotactical/backend/editar_producto.php?id=${id}`, {
+             credentials: 'include', // Envía cookies
+        });
+        console.log("Respuesta recibida, status:", response.status); // Log del estado HTTP
+
+        // Leer la respuesta como texto para poder analizarla incluso si no es JSON válido
+        const responseText = await response.text();
+        console.log("Texto de respuesta recibido:", responseText); // Log del texto crudo
+
+        let data;
+        try {
+            // Intentar parsear el texto como JSON
+            data = JSON.parse(responseText);
+        } catch (jsonError) {
+            // Si falla el parseo, es un error grave (probablemente error PHP no controlado)
+            console.error("Error al parsear JSON:", jsonError, "Respuesta:", responseText);
+            throw new Error(`Respuesta inesperada del servidor (no es JSON válido): ${responseText.substring(0, 200)}...`);
         }
 
-        const data = await response.json();
-        console.log('Respuesta de API (cargarProducto):', data);
+        console.log("Datos JSON parseados:", data); // Log de los datos parseados
 
-        if (data.success && data.data) {
-          setProducto({
-            nombre: data.data.name || '',
-            modelo: data.data.model || '',
-            categoria: data.data.category || '',
-            subcategoria: data.data.subcategory || '',
-            stock_option: data.data.stock_option || 'preorder',
-            stock_quantity: data.data.stock_quantity || '',
-            precio: data.data.price || '',
-            imagen: null
+        // Verificar si la respuesta de red fue OK (status 2xx)
+        if (!response.ok) {
+          // Si el status no es OK, usar el mensaje del JSON si existe, o crear uno
+          throw new Error(data.message || `Error HTTP: ${response.status}`);
+        }
+
+        // Verificar si el backend indicó éxito y envió los datos del producto
+        if (data.success && data.product) {
+          const product = data.product;
+          console.log("Producto recibido:", product); // Log del objeto producto
+
+          // Actualizar el estado del formulario
+          setFormData({
+            name: product.name || '',
+            model: product.model || '',
+            main_category: product.category_id || '', // Usar ID
+            subcategory: product.subcategory_id || '', // Usar ID
+            stock_option: product.stock_option || 'preorder',
+            stock_quantity: product.stock_quantity !== null ? product.stock_quantity : '',
+            price: product.price || '',
+            main_image: null, // Input file se maneja por separado
+            is_active: (product.is_active === 1 || product.is_active === '1') ? 1 : 0, // Asegurar 1 o 0
           });
+          console.log("Estado formData actualizado"); // Confirmación
+
+          // Actualizar otros estados
+          setCurrentImageUrl(product.main_image ? `http://localhost/schizotactical/backend/${product.main_image}` : '');
+          setCategories(data.categories || []);
+          setSubcategories(data.subcategories || []);
         } else {
-          throw new Error(data.message || 'Producto no encontrado');
+          // Si success es false o falta product
+          throw new Error(data.message || 'Los datos recibidos del servidor no son válidos o el producto no existe.');
         }
       } catch (err) {
-        console.error('Error al cargar producto:', err);
-        setError(err.message);
+        // Captura cualquier error durante el fetch o procesamiento
+        console.error('Error detallado al cargar datos:', err);
+        setError(err.message); // Guarda el error para mostrarlo
       } finally {
-        setLoading(false);
+        // Se ejecuta siempre
+        setIsLoading(false);
+        console.log("Carga finalizada (fetchData)"); // Log de finalización
       }
     };
 
-    cargarProducto();
-  }, [id]);
+    fetchData(); // Ejecuta la carga de datos
+  }, [id]); // Dependencia: se re-ejecuta si el ID cambia
 
+  // --- Efecto para Cargar Subcategorías (cuando cambia la categoría principal) ---
   useEffect(() => {
-    const fetchNotifications = async () => {
-      try {
-        const response = await fetch('http://localhost/schizotactical/backend/notificaciones.php', {
-          credentials: 'include',
-        });
-        if (!response.ok) {
-          throw new Error('Error fetching notifications');
+    // No ejecutar en la carga inicial (isLoading es true) o si no hay categoría seleccionada
+    if (!isLoading && formData.main_category) {
+      const fetchSubcategories = async () => {
+        console.log(`Cargando subcategorías para category_id: ${formData.main_category}`);
+        try {
+          const response = await fetch(`http://localhost/schizotactical/backend/get_subcategories.php?category_id=${formData.main_category}`);
+          if (!response.ok) {
+             throw new Error(`Error HTTP al cargar subcategorías: ${response.status}`);
+          }
+          const data = await response.json();
+          console.log("Subcategorías recibidas:", data);
+          // Asume que get_subcategories.php devuelve un array o {success: true, data: [...]}
+          if (Array.isArray(data)) {
+             setSubcategories(data);
+          } else if (data.success && Array.isArray(data.data)) {
+             setSubcategories(data.data);
+          } else {
+             console.warn("Formato inesperado para subcategorías, estableciendo vacío.");
+             setSubcategories([]);
+          }
+        } catch (err) {
+          console.error('Error al cargar subcategorías dinámicamente:', err);
+          setSubcategories([]); // Limpiar en caso de error
         }
-        const data = await response.json();
-        setNotifications(data.data || []);
-      } catch (error) {
-        console.error('Error fetching notifications:', error);
-      }
-    };
+      };
+      fetchSubcategories();
+    } else if (!formData.main_category) {
+        // Limpiar subcategorías si se deselecciona la categoría principal
+        setSubcategories([]);
+    }
+    // Depende del cambio en la categoría principal y del estado de carga inicial
+  }, [formData.main_category, isLoading]);
 
-    fetchNotifications();
-  }, []);
-
+  // --- Manejadores de Cambios (Inputs, Selects, Checkbox) ---
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setProducto(prev => ({ ...prev, [name]: value }));
+    const { name, value, type, checked } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? (checked ? 1 : 0) : value,
+      // Resetear subcategoría si cambia la categoría principal
+      ...(name === 'main_category' ? { subcategory: '' } : {})
+    }));
   };
 
+  // --- Manejador de Cambio de Archivo (Imagen) ---
   const handleFileChange = (e) => {
-    setProducto(prev => ({ ...prev, imagen: e.target.files[0] }));
+    const file = e.target.files[0];
+    if (file) {
+      setFormData((prev) => ({ ...prev, main_image: file })); // Guarda el archivo en el estado
+      // Muestra previsualización
+      const reader = new FileReader();
+      reader.onloadend = () => setImagePreview(reader.result);
+      reader.readAsDataURL(file);
+    } else {
+      // Opcional: Limpiar si se cancela la selección
+      setFormData((prev) => ({ ...prev, main_image: null }));
+      setImagePreview(null);
+    }
   };
 
+  // --- Manejador de Envío del Formulario (Actualización) ---
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsLoading(true);
+    setError(null);
+    const formDataToSend = new FormData();
+    formDataToSend.append('id', id);
+    // Añade los campos al FormData
+    Object.entries(formData).forEach(([key, value]) => {
+      if (key !== 'main_image' || (key === 'main_image' && value instanceof File)) {
+         if (value !== null && value !== '') { formDataToSend.append(key, value); }
+      }
+    });
 
-    const formData = new FormData();
-    formData.append('id', id);
-    formData.append('nombre', producto.nombre);
-    formData.append('modelo', producto.modelo);
-    formData.append('categoria', producto.categoria);
-    formData.append('subcategoria', producto.subcategoria);
-    formData.append('stock_option', producto.stock_option);
-    formData.append('stock_quantity', producto.stock_quantity);
-    formData.append('precio', producto.precio);
-    if (producto.imagen) {
-      formData.append('imagen', producto.imagen);
-    }
+    console.log("Enviando datos para actualizar (POST)...");
+    // Descomenta para ver qué se envía:
+    // for (let [key, value] of formDataToSend.entries()) { console.log(`POST - ${key}:`, value instanceof File ? value.name : value); }
 
     try {
       const response = await fetch('http://localhost/schizotactical/backend/editar_producto.php', {
-        method: 'POST',
-        credentials: 'include',
-        body: formData
+        method: 'POST', credentials: 'include', body: formDataToSend
       });
-
-      if (!response.ok) {
-        throw new Error(`Error HTTP: ${response.status}`);
+      // Leer como texto y luego parsear
+      const responseText = await response.text();
+      let data;
+      try { data = JSON.parse(responseText); }
+      catch (jsonError) {
+          console.error("Error al parsear JSON (POST):", responseText);
+          throw new Error(`Error en servidor (POST): ${responseText.substring(0, 200)}...`);
       }
-
-      const data = await response.json();
-      console.log('Respuesta de edición:', data);
-
+      // Verificar estado y éxito
+      if (!response.ok) { throw new Error(data.message || `Error HTTP: ${response.status}`); }
       if (data.success) {
-        navigate('/admin/productos');
-      } else {
-        addNotification(data.message || 'Error al actualizar el producto', 'error');
-      }
-    } catch (err) {
-      console.error('Error al enviar formulario:', err);
-      addNotification('Error de conexión con el servidor', 'error');
-    }
+        alert('Producto actualizado con éxito');
+        navigate('/admin/productos'); // Volver a la lista
+      } else { throw new Error(data.message || 'Error al actualizar'); }
+    } catch (error) {
+      console.error('Error al enviar formulario (POST):', error);
+      setError(error.message);
+      alert('Error al actualizar: ' + error.message);
+    } finally { setIsLoading(false); }
   };
 
-  if (loading) {
-    return <div className="loading">Cargando producto...</div>;
+  // --- Renderizado ---
+  // Muestra 'Cargando...' solo durante la carga inicial y si no hay error
+  if (isLoading && !formData.name && !error) {
+    return <div className="form-container"><p>Cargando datos del producto...</p></div>;
   }
 
-  if (error) {
-    return <div className="error">{error}</div>;
-  }
-
+  // Renderiza el formulario (incluso si hubo error, para mostrar el mensaje)
   return (
     <div className="form-container">
-      {error && <div className="alert alert-error">{error}</div>}
+      <h2>Editar Producto (ID: {id})</h2>
+      {/* Muestra el mensaje de error si existe */}
+      {error && <div className="error-message" style={{color: 'red', marginBottom: '1rem'}}>Error: {error}</div>}
 
       <form onSubmit={handleSubmit}>
-        <label>Nombre</label>
-        <input 
-          type="text" 
-          name="nombre" 
-          value={producto.nombre} 
-          onChange={handleChange} 
-          required 
-        />
-
-        <label>Modelo</label>
-        <input 
-          type="text" 
-          name="modelo" 
-          value={producto.modelo} 
-          onChange={handleChange} 
-        />
-
-        <label>Categoría</label>
-        <input 
-          type="text" 
-          name="categoria" 
-          value={producto.categoria} 
-          onChange={handleChange} 
-        />
-
-        <label>Subcategoría</label>
-        <input 
-          type="text" 
-          name="subcategoria" 
-          value={producto.subcategoria} 
-          onChange={handleChange} 
-        />
-
-        <label>Stock</label>
-        <select 
-          name="stock_option" 
-          value={producto.stock_option} 
-          onChange={handleChange}
-        >
-          <option value="preorder">Preorden</option>
-          <option value="stock">En stock</option>
-        </select>
-
-        {producto.stock_option === 'stock' && (
-          <>
-            <label>Cantidad en stock</label>
-            <input
-              type="number"
-              name="stock_quantity"
-              value={producto.stock_quantity}
-              onChange={handleChange}
-              min="0"
-            />
-          </>
-        )}
-
-        <label>Precio</label>
-        <input
-          type="number"
-          name="precio"
-          value={producto.precio}
-          onChange={handleChange}
-          min="0"
-          step="0.01"
-        />
-
-        <label>Subir nueva imagen</label>
-        <input 
-          type="file" 
-          accept="image/*" 
-          onChange={handleFileChange} 
-        />
-
-        <button type="submit">Actualizar Producto</button>
+        {/* Nombre */}
+        <div className="form-group">
+          <label htmlFor="name" className="form-label">Nombre del Producto</label>
+          <input type="text" id="name" name="name" className="form-control" value={formData.name} onChange={handleChange} required />
+        </div>
+        {/* Modelo */}
+        <div className="form-group">
+          <label htmlFor="model" className="form-label">Modelo (opcional)</label>
+          <input type="text" id="model" name="model" className="form-control" value={formData.model} onChange={handleChange} />
+        </div>
+        {/* Categoría y Subcategoría */}
+        <div className="form-group-dual">
+          <div className="form-group">
+            <label htmlFor="main_category" className="form-label">Categoría Principal</label>
+            <select id="main_category" name="main_category" className="form-select" value={formData.main_category} onChange={handleChange} required>
+              <option value="">Seleccione una categoría</option>
+              {categories.map(category => ( <option key={category.id} value={category.id}>{category.name}</option> ))}
+            </select>
+          </div>
+          <div className="form-group">
+            <label htmlFor="subcategory" className="form-label">Subcategoría</label>
+            <select id="subcategory" name="subcategory" className="form-select" value={formData.subcategory} onChange={handleChange} disabled={!formData.main_category}>
+              <option value="">{formData.main_category ? 'Seleccione subcategoría (opcional)' : 'Seleccione categoría primero'}</option>
+              {subcategories.map(sub => ( <option key={sub.id} value={sub.id}>{sub.name}</option> ))}
+            </select>
+          </div>
+        </div>
+        {/* Stock */}
+        <div className="form-group-dual">
+           <div className="form-group">
+             <label className="form-label">Opciones de Stock</label>
+             <div className="radio-group">
+               <label className="radio-option"> <input type="radio" name="stock_option" value="preorder" checked={formData.stock_option === 'preorder'} onChange={handleChange} /> Por encargo </label>
+               <label className="radio-option"> <input type="radio" name="stock_option" value="instock" checked={formData.stock_option === 'instock'} onChange={handleChange} /> En stock </label>
+             </div>
+           </div>
+           {formData.stock_option === 'instock' && (
+             <div className="form-group">
+               <label htmlFor="stock_quantity" className="form-label">Cantidad en Stock</label>
+               <input type="number" id="stock_quantity" name="stock_quantity" className="form-control" value={formData.stock_quantity} onChange={handleChange} min="0" required />
+             </div>
+           )}
+        </div>
+        {/* Precio */}
+        <div className="form-group">
+          <label htmlFor="price" className="form-label">Precio (CLP)</label>
+          <input type="number" id="price" name="price" className="form-control" value={formData.price} onChange={handleChange} min="0" step="any" required />
+        </div>
+        {/* Estado */}
+        <div className="form-group">
+             <label className="form-label">Estado</label>
+             <div className="checkbox-group">
+               <label className="checkbox-option"> <input type="checkbox" name="is_active" checked={formData.is_active === 1 || formData.is_active === '1'} onChange={handleChange} /> Activo (visible en la tienda) </label>
+             </div>
+        </div>
+        {/* Imagen */}
+        <div className="form-group">
+          <label htmlFor="main_image" className="form-label">Imagen Principal</label>
+          {/* Muestra imagen actual o previsualización */}
+          {(imagePreview || currentImageUrl) && (
+             <img
+               src={imagePreview || currentImageUrl}
+               alt={imagePreview ? "Vista previa nueva imagen" : "Imagen actual"}
+               className="image-upload-preview"
+               style={{marginBottom: '1rem'}}
+             />
+          )}
+          <input type="file" id="main_image" name="main_image" className="form-control" onChange={handleFileChange} accept="image/*" />
+          <small>Selecciona una nueva imagen solo si deseas reemplazar la actual.</small>
+        </div>
+        {/* Acciones */}
+        <div className="form-actions">
+          <button type="button" className="btn btn-secondary" onClick={() => navigate('/admin/productos')}>Cancelar</button>
+          <button type="submit" className="btn btn-primary" disabled={isLoading}> {isLoading ? 'Actualizando...' : 'Actualizar Producto'} </button>
+        </div>
       </form>
     </div>
   );

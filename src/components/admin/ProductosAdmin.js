@@ -1,6 +1,7 @@
+// src/components/admin/ProductosAdmin.js
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import './ProductosAdmin.css'; // Asegúrate de tener un archivo CSS para estilos
+import './ProductosAdmin.css'; // Asegúrate de tener este archivo CSS
 
 function ProductosAdmin() {
   const [products, setProducts] = useState([]);
@@ -8,129 +9,162 @@ function ProductosAdmin() {
   const [error, setError] = useState(null);
   const navigate = useNavigate();
 
+  // Cargar productos (sin cambios en lógica)
   useEffect(() => {
     const fetchProducts = async () => {
+      setLoading(true);
+      setError(null);
       try {
         const response = await fetch('http://localhost/schizotactical/backend/get_products.php', {
           credentials: 'include'
         });
-
         if (!response.ok) {
-          throw new Error('Error al obtener productos');
+          throw new Error(`Error HTTP: ${response.status} ${response.statusText}`);
         }
-
         const data = await response.json();
-        
-        // Verificar que data sea un array antes de setearlo
-        if (Array.isArray(data)) {
-          setProducts(data);
-        } else if (data.data && Array.isArray(data.data)) {
-          // Si la respuesta tiene formato { data: [...] }
+        if (data && data.success && Array.isArray(data.data)) {
           setProducts(data.data);
+        } else if (Array.isArray(data)) {
+           console.warn("Respuesta de API inesperada (array directo), se procesará.");
+           setProducts(data);
         } else {
-          throw new Error('Formato de datos inválido');
+          throw new Error(data.message || 'Formato de datos inválido recibido del servidor');
         }
       } catch (err) {
-        console.error('Error:', err);
+        console.error('Error al obtener productos:', err);
         setError(err.message);
+        setProducts([]);
       } finally {
         setLoading(false);
       }
     };
-
     fetchProducts();
   }, []);
 
+  // Eliminar producto (sin cambios en lógica)
   const handleDelete = async (id) => {
-    if (window.confirm('¿Estás seguro de eliminar este producto?')) {
+    if (window.confirm(`¿Estás seguro de eliminar el producto con ID ${id}?`)) {
       try {
         const response = await fetch(
-          `http://localhost/schizotactical/backend/eliminar_producto.php?id=${id}`, 
+          `http://localhost/schizotactical/backend/eliminar_producto.php?id=${id}`,
           {
             method: 'GET',
             credentials: 'include'
           }
         );
-
         if (!response.ok) {
-          throw new Error('Error al eliminar producto');
+           const errorData = await response.json().catch(() => ({ message: `Error HTTP: ${response.status}` }));
+           throw new Error(errorData.message || 'Error en la respuesta del servidor al eliminar');
         }
-
-        setProducts(products.filter(product => product.id !== id));
+        const data = await response.json();
+        if (data.success) {
+          setProducts(prevProducts => prevProducts.filter(product => product.id !== id));
+          alert('Producto eliminado con éxito');
+        } else {
+          throw new Error(data.message || 'Error al eliminar el producto en el backend');
+        }
       } catch (err) {
-        console.error('Error:', err);
-        alert('Error al eliminar el producto');
+        console.error('Error al eliminar producto:', err);
+        alert(`Error al eliminar el producto: ${err.message}`);
       }
     }
   };
 
+  // Renderizados condicionales (sin cambios)
   if (loading) {
-    return <div>Cargando productos...</div>;
+    return <div className="loading-message">Cargando productos...</div>;
   }
-
   if (error) {
-    return <div className="error-message">Error: {error}</div>;
+    return <div className="error-message">Error al cargar productos: {error}</div>;
   }
-
   if (!products || products.length === 0) {
     return (
-      <div>
-        <p>No hay productos disponibles.</p>
-        <Link to="/admin/agregar-producto" className="btn-add">
-          Agregar Primer Producto
-        </Link>
+      <div className="productos-admin-container">
+         <div className="productos-header">
+            <h2>Lista de Productos</h2>
+            <Link to="/admin/agregar-producto" className="btn-add">
+              Agregar Primer Producto
+            </Link>
+         </div>
+        <p>No hay productos disponibles para mostrar.</p>
       </div>
     );
   }
 
+  // Renderizado principal
   return (
     <div className="productos-admin-container">
       <div className="productos-header">
-        <h2>Lista de Productos</h2>
+        <h2>Lista de Productos ({products.length})</h2>
         <Link to="/admin/agregar-producto" className="btn-add">
-          Agregar Producto
+          + Agregar Producto
         </Link>
       </div>
-
-      <table className="productos-table">
-        <thead>
-          <tr>
-            <th>Nombre</th>
-            <th>Modelo</th>
-            <th>Precio</th>
-            <th>Stock</th>
-            <th>Acciones</th>
-          </tr>
-        </thead>
-        <tbody>
-          {products.map((product) => (
-            <tr key={product.id}>
-              <td>{product.name || 'N/A'}</td>
-              <td>{product.model || 'N/A'}</td>
-              <td>${product.price ? Number(product.price).toFixed(2) : '0.00'}</td>
-              <td>
-                {product.stock_option === 'instock' 
-                  ? product.stock_quantity || '0' 
-                  : 'Por encargo'}
-              </td>
-              <td className="actions">
-                <button 
-                  onClick={() => navigate(`/admin/editar-producto/${product.id}`)}
-                  className="btn-edit"
-                >
-                  Editar
-                </button>
-                <button 
-                  onClick={() => handleDelete(product.id)}
-                  className="btn-delete"
-                >
-                  Eliminar
-                </button>
-              </td>
+      <div className="table-responsive">
+        <table className="productos-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Imagen</th>
+              <th>Nombre</th>
+              <th>Modelo</th>
+              <th>Precio</th>
+              <th>Stock</th>
+              <th>Estado</th>
+              <th>Acciones</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {products.map((product) => (
+              <tr key={product.id}>
+                <td>{product.id}</td>
+                <td>
+                  {product.main_image ? (
+                    <img
+                       src={`http://localhost/schizotactical/backend/${product.main_image}`}
+                       alt={product.name || 'Producto'}
+                       className="product-thumbnail"
+                       onError={(e) => { e.target.style.display = 'none'; }}
+                    />
+                  ) : (
+                    <span className="no-image">Sin imagen</span>
+                  )}
+                </td>
+                <td>{product.name || 'N/A'}</td>
+                <td>{product.model || 'N/A'}</td>
+                <td>${product.price ? Number(product.price).toLocaleString('es-CL') : '0'}</td>
+                <td>
+                  {product.stock_option === 'instock'
+                    ? `En Stock (${product.stock_quantity || '0'})`
+                    : 'Por encargo'}
+                </td>
+                 <td>
+                   {/* Se cambió == por === */}
+                   <span className={`status ${product.is_active === 1 || product.is_active === '1' ? 'status-active' : 'status-inactive'}`}>
+                     {product.is_active === 1 || product.is_active === '1' ? 'Activo' : 'Inactivo'}
+                   </span>
+                 </td>
+                <td className="actions">
+                  <button
+                    onClick={() => navigate(`/admin/productos/editar/${product.id}`)}
+                    className="btn-edit"
+                    title="Editar Producto"
+                  >
+                    Editar
+                  </button>
+                  <button
+                    onClick={() => handleDelete(product.id)}
+                    className="btn-delete"
+                    title="Eliminar Producto"
+                  >
+                    Eliminar
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

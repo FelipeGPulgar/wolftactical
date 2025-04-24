@@ -1,3 +1,4 @@
+// src/components/Navbar.js
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
@@ -6,23 +7,40 @@ import "./Navbar.css";
 function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const [categories, setCategories] = useState([]);
+  const [error, setError] = useState(null); // Estado para manejar errores de carga
 
   useEffect(() => {
     // Fetch categories and subcategories from the backend
-    axios.get("http://localhost/schizotactical/backend/categories.php").then((response) => {
-      setCategories(response.data);
-    }).catch((error) => {
-      console.error("Error fetching categories:", error);
-    });
+    axios.get("http://localhost/schizotactical/backend/categories.php")
+      .then((response) => {
+        // Validar que la respuesta sea un array
+        if (Array.isArray(response.data)) {
+          setCategories(response.data);
+        } else {
+          console.error("Error: La respuesta de la API no es un array:", response.data);
+          setError("Formato de datos inesperado.");
+          setCategories([]); // Asegurar que sea un array vacío
+        }
+      })
+      .catch((error) => {
+        console.error("Error fetching categories:", error);
+        setError("No se pudieron cargar las categorías.");
+        setCategories([]); // Asegurar que sea un array vacío en caso de error
+      });
   }, []);
 
   const toggleMenu = () => {
     setIsOpen(!isOpen);
   };
 
+  // Función para cerrar el menú (útil al hacer clic en un enlace)
+  const closeMenu = () => {
+    setIsOpen(false);
+  };
+
   return (
     <nav className="navbar">
-      <Link to="/" className="logo">
+      <Link to="/" className="logo" onClick={closeMenu}> {/* Cierra menú al ir a Home */}
         SchizoTactical
       </Link>
 
@@ -32,17 +50,34 @@ function Navbar() {
         <div className="bar"></div>
       </div>
 
+      {/* Mostrar error si no se cargan las categorías */}
+      {error && <div className="navbar-error">{error}</div>}
+
       <ul className={`nav-links ${isOpen ? "active" : ""}`}>
+        {/* Enlace a Home (opcional, si no está el logo) */}
+        {/* <li><Link to="/" onClick={closeMenu}>Inicio</Link></li> */}
+
         {categories.map((category) => (
           <li key={category.id} className="dropdown-container">
-            <Link to={`/${category.name.toLowerCase()}`} onClick={toggleMenu}>
+            {/* Enlace para la Categoría Principal */}
+            <Link
+              // Apunta a /productos con el parámetro ?category=
+              to={`/productos?category=${encodeURIComponent(category.name)}`}
+              onClick={closeMenu} // Cierra el menú al hacer clic
+            >
               {category.name}
             </Link>
+            {/* Menú desplegable para Subcategorías */}
             {category.subcategories && category.subcategories.length > 0 && (
               <ul className="dropdown">
                 {category.subcategories.map((sub) => (
                   <li key={sub.id}>
-                    <Link to={`/${category.name.toLowerCase()}/${sub.name.toLowerCase()}`} onClick={toggleMenu}>
+                    {/* Enlace para la Subcategoría */}
+                    <Link
+                      // Apunta a /productos con el parámetro ?subcategory=
+                      to={`/productos?subcategory=${encodeURIComponent(sub.name)}`}
+                      onClick={closeMenu} // Cierra el menú al hacer clic
+                    >
                       {sub.name}
                     </Link>
                   </li>
@@ -55,12 +90,15 @@ function Navbar() {
 
       <div className="nav-actions">
         <div className="search-bar">
-          <input type="text" placeholder="Search..." />
-          <button></button>
+          <input type="text" placeholder="Buscar..." /> {/* Placeholder actualizado */}
+          {/* Considera añadir un icono dentro del botón o usar aria-label */}
+          <button aria-label="Buscar"></button>
         </div>
-        <Link to="/login" className="login-link">Iniciar Sesión</Link>
-        <Link to="/register" className="register-link">Registrarse</Link>
-        <Link to="/cart" className="cart-icon">
+        {/* Enlaces de acción también cierran el menú */}
+        <Link to="/login" className="login-link" onClick={closeMenu}>Iniciar Sesión</Link>
+        <Link to="/register" className="register-link" onClick={closeMenu}>Registrarse</Link>
+        {/* Icono del carrito - Sin cambios estructurales respecto a tu versión */}
+        <Link to="/cart" className="cart-icon" onClick={closeMenu} aria-label="Carrito de compras">
           <svg
             version="1.1"
             id="_x32_"

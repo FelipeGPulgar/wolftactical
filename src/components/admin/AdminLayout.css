@@ -6,7 +6,6 @@
   
   .admin-sidebar {
     width: 280px;
-    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
     color: white;
     padding: 2rem 1rem;
     position: relative;

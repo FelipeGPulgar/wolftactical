@@ -1,76 +1,182 @@
 /* ProductosAdmin.css */
+
+/* Variables (Asegúrate de que estén definidas globalmente o aquí) */
+:root {
+  --primary-color: #4361ee; /* Ejemplo */
+  --secondary-color: #3f37c9; /* Ejemplo */
+  --success-color: #28a745; /* Ejemplo */
+  --danger-color: #dc3545; /* Ejemplo */
+  --gray-color: #6c757d; /* Ejemplo */
+  --border-radius: 0.375rem; /* Ejemplo */
+  --box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1); /* Ejemplo */
+  --transition: all 0.2s ease-in-out; /* Ejemplo */
+}
+
 .products-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 2rem;
-  }
-  
-  .products-table {
-    width: 100%;
-    background: white;
-    border-radius: var(--border-radius);
-    box-shadow: var(--box-shadow);
-    overflow: hidden;
-    border-collapse: collapse;
-  }
-  
-  .products-table thead {
-    background-color: var(--primary-color);
-    color: white;
-  }
-  
-  .products-table th {
-    padding: 1rem;
-    text-align: left;
-    font-weight: 500;
-  }
-  
-  .products-table td {
-    padding: 1rem;
-    border-bottom: 1px solid #eee;
-  }
-  
-  .products-table tr:last-child td {
-    border-bottom: none;
-  }
-  
-  .products-table tr:hover {
-    background-color: #f8f9fa;
-  }
-  
-  .actions-cell {
-    display: flex;
-    gap: 0.5rem;
-  }
-  
-  .status-badge {
-    display: inline-block;
-    padding: 0.3rem 0.6rem;
-    border-radius: 20px;
-    font-size: 0.8rem;
-    font-weight: 500;
-  }
-  
-  .status-instock {
-    background-color: rgba(76, 201, 240, 0.1);
-    color: var(--success-color);
-  }
-  
-  .status-preorder {
-    background-color: rgba(247, 37, 133, 0.1);
-    color: var(--danger-color);
-  }
-  
-  .empty-state {
-    text-align: center;
-    padding: 3rem;
-    background: white;
-    border-radius: var(--border-radius);
-    box-shadow: var(--box-shadow);
-  }
-  
-  .empty-state p {
-    color: var(--gray-color);
-    margin-bottom: 1.5rem;
-  }
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.table-responsive {
+  overflow-x: auto; /* Permite scroll horizontal en pantallas pequeñas si la tabla es muy ancha */
+}
+
+.products-table {
+  width: 100%;
+  background: white;
+  border-radius: var(--border-radius);
+  box-shadow: var(--box-shadow);
+  overflow: hidden; /* Para que el border-radius funcione en las esquinas */
+  border-collapse: collapse; /* Colapsa los bordes de las celdas */
+  min-width: 600px; /* Ancho mínimo para evitar que se comprima demasiado */
+}
+
+.products-table thead {
+  background-color: var(--primary-color);
+  color: white;
+}
+
+.products-table th {
+  padding: 1rem;
+  text-align: left;
+  font-weight: 500;
+  white-space: nowrap; /* Evita que los títulos se partan */
+}
+
+.products-table td {
+  padding: 0.75rem 1rem; /* Ajuste ligero del padding */
+  border-bottom: 1px solid #eee;
+  vertical-align: middle; /* Alinea verticalmente el contenido */
+}
+
+.products-table tr:last-child td {
+  border-bottom: none;
+}
+
+.products-table tr:hover {
+  background-color: #f8f9fa;
+}
+
+/* Estilos para la miniatura de la imagen */
+.product-thumbnail {
+  width: 60px;         /* Ancho fijo */
+  height: 60px;        /* Alto fijo */
+  object-fit: cover;   /* Escala y recorta la imagen para llenar el espacio */
+  border-radius: 4px;  /* Bordes redondeados suaves */
+  display: block;      /* Asegura comportamiento de bloque */
+  margin: auto;        /* Centra si la celda es más ancha */
+  background-color: #f0f0f0; /* Color de fondo mientras carga o si falla */
+}
+
+/* Estilos para cuando no hay imagen */
+.no-image {
+  display: flex;         /* Usar flex para centrar */
+  justify-content: center;
+  align-items: center;
+  width: 60px;           /* Mismo tamaño que la imagen */
+  height: 60px;
+  background-color: #f0f0f0; /* Fondo gris claro */
+  color: #aaa;          /* Color de texto gris */
+  font-size: 0.7rem;     /* Tamaño de fuente pequeño */
+  border-radius: 4px;    /* Mismos bordes redondeados */
+  text-align: center;
+  margin: auto;
+}
+
+/* Estilos para la celda de acciones */
+.actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap; /* Permite que los botones pasen a la siguiente línea si no caben */
+}
+
+/* Estilos para los botones de acción (ejemplo) */
+.btn-edit, .btn-delete {
+  padding: 0.4rem 0.8rem;
+  border: none;
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: var(--transition);
+  white-space: nowrap;
+}
+
+.btn-edit {
+  background-color: var(--primary-color);
+  color: white;
+}
+.btn-edit:hover {
+  opacity: 0.85;
+}
+
+.btn-delete {
+  background-color: var(--danger-color);
+  color: white;
+}
+.btn-delete:hover {
+  opacity: 0.85;
+}
+
+/* Estilos para el estado (Activo/Inactivo) */
+.status {
+  display: inline-block;
+  padding: 0.3rem 0.7rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.status-active {
+  background-color: rgba(40, 167, 69, 0.15); /* Verde más suave */
+  color: #1e7e34; /* Verde oscuro */
+}
+
+.status-inactive {
+  background-color: rgba(108, 117, 125, 0.15); /* Gris */
+  color: #5a6268; /* Gris oscuro */
+}
+
+
+/* Estilos para el estado de stock (ya estaban, solo como referencia) */
+.status-instock {
+  background-color: rgba(76, 201, 240, 0.1);
+  color: var(--success-color); /* Asegúrate que --success-color esté definido */
+}
+
+.status-preorder {
+  background-color: rgba(247, 37, 133, 0.1);
+  color: var(--danger-color); /* Asegúrate que --danger-color esté definido */
+}
+
+/* Estado vacío (cuando no hay productos) */
+.empty-state {
+  text-align: center;
+  padding: 3rem;
+  background: white;
+  border-radius: var(--border-radius);
+  box-shadow: var(--box-shadow);
+  margin-top: 2rem;
+}
+
+.empty-state p {
+  color: var(--gray-color);
+  margin-bottom: 1.5rem;
+}
+
+/* Botón de agregar en estado vacío o header */
+.btn-add {
+  display: inline-block;
+  padding: 0.6rem 1.2rem;
+  background-color: var(--primary-color);
+  color: white;
+  text-decoration: none;
+  border-radius: var(--border-radius);
+  transition: var(--transition);
+  font-weight: 500;
+}
+.btn-add:hover {
+  opacity: 0.9;
+}
