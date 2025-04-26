@@ -1,95 +1,150 @@
+/* Login.css - Estilos Mejorados */
+
 .login-container {
     display: flex;
     justify-content: center;
     align-items: center;
     min-height: 100vh;
-    background: linear-gradient(135deg, #4a76a8, #3a5f8a);
-    font-family: 'Arial', sans-serif;
+    /* Fondo más sutil y moderno */
+    background-color: #f4f7f6; /* Un gris muy claro */
+    /* Opcional: añadir una textura sutil */
+    /* background-image: url('/path/to/subtle-pattern.png'); */
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* Fuente más moderna */
+    padding: 1rem; /* Espacio en pantallas pequeñas */
 }
 
-.login-form {
+/* Contenedor extra para el formulario */
+.login-box {
     background: white;
-    padding: 2.5rem;
-    border-radius: 12px;
-    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
+    padding: 2.5rem 3rem; /* Más padding horizontal */
+    border-radius: 10px; /* Bordes ligeramente más suaves */
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); /* Sombra más pronunciada */
     width: 100%;
-    max-width: 400px;
+    max-width: 420px; /* Un poco más ancho */
     text-align: center;
+    border-top: 5px solid #4a76a8; /* Detalle de color superior */
 }
 
-/* Updated the title to reflect a more inclusive login for both users and admins */
 .login-form h2 {
-    font-size: 1.8rem;
+    font-size: 1.6rem; /* Ligeramente más pequeño */
     color: #333;
-    margin-bottom: 2rem;
-    font-weight: bold;
-    text-transform: uppercase;
-    letter-spacing: 1px;
+    margin-bottom: 2.5rem; /* Más espacio debajo del título */
+    font-weight: 600; /* Un poco menos grueso que 'bold' */
+    text-transform: none; /* Quitamos mayúsculas */
+    letter-spacing: 0.5px;
 }
 
 .form-group {
     margin-bottom: 1.5rem;
+    text-align: left; /* Alinea labels (si se usan) e inputs a la izquierda */
 }
 
+/* Labels opcionales (si decides usarlos en lugar de placeholders) */
 .form-group label {
     display: block;
     margin-bottom: 0.5rem;
-    font-weight: 600;
+    font-weight: 500; /* Peso normal */
     color: #555;
+    font-size: 0.9rem;
 }
 
 .form-group input {
     width: 100%;
-    padding: 0.85rem;
-    border: 1px solid #ccc;
+    padding: 0.9rem 1rem; /* Padding más cómodo */
+    border: 1px solid #d1d5db; /* Borde gris claro */
     border-radius: 6px;
     font-size: 1rem;
-    transition: border-color 0.3s;
+    color: #333;
+    box-sizing: border-box; /* Asegura que padding no aumente el tamaño total */
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.form-group input::placeholder {
+    color: #9ca3af; /* Color de placeholder más suave */
 }
 
 .form-group input:focus {
     border-color: #4a76a8;
     outline: none;
-    box-shadow: 0 0 5px rgba(74, 118, 168, 0.5);
+    box-shadow: 0 0 0 3px rgba(74, 118, 168, 0.2); /* Sombra de foco sutil */
 }
 
-button[type="submit"] {
-    width: 100%;
-    padding: 0.85rem;
-    background: #4a76a8;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    font-size: 1.1rem;
-    font-weight: bold;
-    cursor: pointer;
-    transition: background-color 0.3s, transform 0.2s;
-}
-
-button[type="submit"]:hover {
-    background: #3a5f8a;
-    transform: scale(1.02);
-}
-
-button[type="submit"]:disabled {
-    background: #cccccc;
-    cursor: not-allowed;
-}
-
+/* Mensajes de error/éxito */
 .message {
-    margin-top: 1.5rem;
-    padding: 1rem;
+    margin-bottom: 1.5rem; /* Espacio antes del botón */
+    padding: 0.8rem 1rem;
     border-radius: 6px;
     text-align: center;
-    font-size: 0.95rem;
+    font-size: 0.9rem;
+    border: 1px solid transparent;
 }
 
 .message.success {
-    background: #d4edda;
-    color: #155724;
+    background-color: #e6f9f0; /* Fondo verde muy claro */
+    color: #0d9488; /* Color verde azulado */
+    border-color: #a7f3d0; /* Borde verde claro */
 }
 
 .message.error {
-    background: #f8d7da;
-    color: #721c24;
+    background-color: #fef2f2; /* Fondo rojo muy claro */
+    color: #dc2626; /* Color rojo */
+    border-color: #fecaca; /* Borde rojo claro */
+}
+
+/* Botón de Login */
+.btn-login {
+    width: 100%;
+    padding: 0.9rem;
+    background: linear-gradient(135deg, #5a86b8, #4a76a8); /* Gradiente sutil */
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 1.05rem; /* Ligeramente más grande */
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 10px rgba(74, 118, 168, 0.3);
+    margin-bottom: 1rem; /* Espacio antes del botón de volver */
+}
+
+.btn-login:hover:not(:disabled) {
+    background: linear-gradient(135deg, #4a76a8, #3a5f8a);
+    box-shadow: 0 6px 12px rgba(74, 118, 168, 0.4);
+    transform: translateY(-2px); /* Efecto sutil al pasar el ratón */
+}
+
+.btn-login:active:not(:disabled) {
+    transform: translateY(0); /* Quitar efecto al hacer clic */
+    box-shadow: 0 4px 10px rgba(74, 118, 168, 0.3);
+}
+
+.btn-login:disabled {
+    background: #e5e7eb; /* Gris claro para deshabilitado */
+    color: #9ca3af;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+/* Botón/Link para Volver a la Tienda */
+.btn-back-store {
+    display: inline-block; /* Para que respete padding y margen */
+    width: 100%; /* Ocupa todo el ancho */
+    padding: 0.75rem;
+    background-color: #f3f4f6; /* Fondo gris muy claro */
+    color: #4b5563; /* Color de texto gris oscuro */
+    border: 1px solid #d1d5db; /* Borde gris claro */
+    border-radius: 6px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    text-align: center;
+    text-decoration: none; /* Quitar subrayado del link */
+    cursor: pointer;
+    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+    box-sizing: border-box;
+}
+
+.btn-back-store:hover {
+    background-color: #e5e7eb; /* Fondo un poco más oscuro al pasar el ratón */
+    border-color: #adb5bd;
+    color: #1f2937; /* Texto más oscuro */
 }

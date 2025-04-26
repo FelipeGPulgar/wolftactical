@@ -1,178 +1,125 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import './NotificationManager.css';
+import './NotificationManager.css'; // Asegúrate que este archivo CSS exista y contenga los estilos
 
-// --- Componente Principal (si se usa en una página dedicada) ---
-const NotificationManager = (props = {}) => {
-  // Usar useMemo para evitar recalcular innecesariamente si las props no cambian
-  const initialNotifications = useMemo(() => props.notifications || [], [props.notifications]);
-  const [localNotifications, setLocalNotifications] = useState(initialNotifications);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
+// --- Componente Panel Lateral (Usado por AdminNavbar) ---
+// Recibe todo como props desde el componente que lo usa (AdminNavbar)
+const NotificationPanel = ({
+  notifications = [], // Lista de notificaciones
+  deleteNotification, // Función para eliminar una notificación
+  isOpen,             // Booleano para indicar si el panel está abierto
+  onClose,            // Función para cerrar el panel
+  error,              // Mensaje de error (si lo hay)
+  clearError          // Función opcional para limpiar el error
+}) => {
+  // No renderiza nada si no está abierto
+  if (!isOpen) return null;
 
-  // Función para refrescar notificaciones
-  const refreshNotifications = async () => {
-    // No iniciar carga si ya está cargando para evitar múltiples llamadas
-    // setIsLoading(true); // Quitado para que el polling sea menos intrusivo visualmente
-    setError(null);
+  // Función para formatear la fecha (puedes ajustarla)
+  const formatDateTime = (dateString) => {
+    if (!dateString) return 'Fecha inválida';
     try {
-      const response = await fetch('http://localhost/schizotactical/backend/notificaciones.php', {
-        credentials: 'include',
+      // Intenta crear una fecha; si falla, devuelve un mensaje
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) {
+        return 'Fecha inválida';
+      }
+      return date.toLocaleString('es-ES', { // Formato local español
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
       });
-      if (!response.ok) {
-        throw new Error(`Error HTTP: ${response.status}`);
-      }
-      const data = await response.json();
-      if (data.success && Array.isArray(data.data)) {
-        setLocalNotifications(data.data);
-      } else {
-        // Si success es false o data.data no es array
-        console.error("Error o formato inválido al refrescar notificaciones:", data.message || data);
-        setLocalNotifications([]); // Mantener como array vacío
-      }
-    } catch (error) {
-      console.error('Error refrescando notificaciones:', error);
-      setError(error.message); // Mostrar error si falla el refresh
-      setLocalNotifications([]); // Limpiar en caso de error grave
-    } finally {
-      // setIsLoading(false); // Quitado
+    } catch (e) {
+      console.error("Error formateando fecha:", dateString, e);
+      return 'Fecha inválida';
     }
   };
 
-  // Efecto para carga inicial y polling
-  useEffect(() => {
-    setIsLoading(true); // Marcar carga solo al inicio
-    refreshNotifications().finally(() => setIsLoading(false)); // Carga inicial
-
-    const interval = setInterval(refreshNotifications, 5000); // Polling cada 5 segundos
-    return () => clearInterval(interval); // Limpiar intervalo al desmontar
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Ejecutar solo una vez al montar
-
-  // Efecto para actualizar desde props (si se pasan desde fuera)
-  useEffect(() => {
-    // Solo actualizar si las props realmente cambian y no estamos cargando
-    if (!isLoading) {
-       setLocalNotifications(initialNotifications);
-    }
-  }, [initialNotifications, isLoading]);
-
-
-  if (isLoading) {
-    return <div className="notification-container"><p>Cargando notificaciones...</p></div>;
-  }
-
-  if (error) {
-     return <div className="notification-container error-message">Error: {error}</div>;
-  }
 
   return (
-    <div className="notification-container">
-      <h3>Historial de Notificaciones</h3>
-      {localNotifications.length === 0 ? (
-        <p className="no-notifications">No hay notificaciones</p>
-      ) : (
-        <table className="notification-table">
-          <thead>
-            <tr>
-              <th>Mensaje</th>
-              <th>Tipo</th>
-              <th>Fecha</th>
-              {/* Podrías añadir botón de eliminar aquí si esta vista lo requiere */}
-            </tr>
-          </thead>
-          <tbody>
-            {localNotifications.map((notification) => (
-              <tr key={notification.id}>
-                <td>{notification.message}</td>
-                <td>{notification.type}</td>
-                {/* CORREGIDO: Usar created_at */}
-                <td>{new Date(notification.created_at).toLocaleString()}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-    </div>
-  );
-};
-
-// --- Componente Panel Lateral (Usado por AdminNavbar) ---
-const NotificationPanel = ({
-  notifications = [], // Default a array vacío
-  deleteNotification, // Función para eliminar
-  isOpen,
-  onClose,
-  error,
-  clearError // Función para limpiar error (si la implementas)
-}) => {
-  if (!isOpen) return null;
-
-  return (
-    // Overlay para cerrar al hacer clic fuera
+    // Overlay oscuro para cerrar al hacer clic fuera
     <div className="notification-overlay" onClick={onClose}>
-      {/* Contenedor del panel, detiene la propagación del clic */}
+      {/* Contenedor principal del panel, detiene la propagación para no cerrar al hacer clic dentro */}
       <div className="notification-center" onClick={e => e.stopPropagation()}>
+        {/* Cabecera del panel */}
         <div className="notification-header">
           <h3>Notificaciones ({notifications.length})</h3>
           <button className="close-button" onClick={onClose} aria-label="Cerrar">×</button>
         </div>
 
-        {/* Muestra error si existe */}
+        {/* Muestra un mensaje de error si existe */}
         {error && (
-          <div className="notification notification-error"> {/* Usar clase de notificación */}
-            <span>{error}</span>
-            {/* Botón opcional para limpiar el error */}
-            {clearError && <button className="delete-button" onClick={clearError}>×</button>}
+          // Usamos la estructura de una notificación para mostrar el error
+          <div className="notification notification-error">
+            <div className="notification-content">
+              <span className="notification-message">{error}</span>
+            </div>
+            {/* Botón opcional para limpiar el error si se proporciona la función */}
+            {clearError && (
+              <button
+                className="delete-button" // Reutilizamos estilo del botón eliminar
+                onClick={clearError}
+                aria-label="Descartar error"
+              >
+                ×
+              </button>
+            )}
           </div>
         )}
 
-        {/* Contenedor de la lista/tabla de notificaciones */}
+        {/* Contenedor de la lista de notificaciones */}
         <div className="notifications-container">
-          {notifications.length === 0 ? (
+          {notifications.length === 0 && !error ? (
+            // Mensaje si no hay notificaciones y no hay error
             <p className="no-notifications">No hay notificaciones</p>
           ) : (
-            // Puedes usar una lista <ul> o la tabla <table>
+            // Lista de notificaciones
+            // Usaremos una lista <ul> simple aquí, pero podrías cambiarla por la tabla si prefieres
             <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
               {notifications.map((notification) => (
-                <li key={notification.id} className={`notification notification-${notification.type}`}>
+                <li key={notification.id} className={`notification notification-${notification.type || 'info'}`}>
+                  {/* Contenido de la notificación (mensaje y hora) */}
                   <div className="notification-content">
-                     <span className="notification-message">{notification.message}</span>
-                     {/* CORREGIDO: Usar created_at */}
-                     <span className="notification-time">{new Date(notification.created_at).toLocaleString()}</span>
+                    <span className="notification-message">{notification.message}</span>
+                    {/* Asegúrate que 'created_at' exista en tus datos */}
+                    <span className="notification-time">{formatDateTime(notification.created_at)}</span>
                   </div>
-                  {/* Botón para eliminar, llama a la función pasada por props */}
+                  {/* Botón para eliminar (si se proporciona la función) */}
                   {deleteNotification && (
-                     <button
-                       className="delete-button"
-                       onClick={() => deleteNotification(notification.id)}
-                       aria-label="Eliminar notificación"
-                     >
-                       ×
-                     </button>
+                    <button
+                      className="delete-button"
+                      onClick={() => deleteNotification(notification.id)}
+                      aria-label="Eliminar notificación"
+                    >
+                      × {/* Icono 'X' para eliminar */}
+                    </button>
                   )}
                 </li>
               ))}
             </ul>
-            /* O si prefieres la tabla:
+            /*
+            // --- Alternativa con Tabla ---
             <table className="notification-table">
               <thead>
                 <tr>
                   <th>Mensaje</th>
                   <th>Tipo</th>
                   <th>Fecha</th>
-                  <th></th> // Columna para botón eliminar
+                  <th></th> // Columna para botón
                 </tr>
               </thead>
               <tbody>
                 {notifications.map((notification) => (
-                  <tr key={notification.id}>
-                    <td>{notification.message}</td>
-                    <td>{notification.type}</td>
-                    <td>{new Date(notification.created_at).toLocaleString()}</td>
-                    <td>
+                  // Aplicar clase de tipo a la fila <tr>
+                  <tr key={notification.id} className={`notification-row-${notification.type || 'info'}`}>
+                    <td className="message-cell">{notification.message}</td>
+                    <td>{notification.type || 'info'}</td>
+                    <td>{formatDateTime(notification.created_at)}</td>
+                    <td className="action-cell">
                       {deleteNotification && (
                         <button
-                          className="delete-button" // Podrías necesitar estilos específicos
+                          className="delete-button"
                           onClick={() => deleteNotification(notification.id)}
                           aria-label="Eliminar notificación"
                         >
@@ -192,11 +139,99 @@ const NotificationPanel = ({
   );
 };
 
-// --- Hook Personalizado (para lógica reutilizable) ---
-// Este hook centraliza la lógica de refrescar y añadir, pero no maneja el estado global.
-// Podría ser útil si diferentes componentes necesitan estas funciones.
-export const useNotificationManager = () => {
 
+// --- Componente Principal (Vista de página completa - Mantenido como estaba) ---
+const NotificationManager = (props = {}) => {
+  const initialNotifications = useMemo(() => props.notifications || [], [props.notifications]);
+  const [localNotifications, setLocalNotifications] = useState(initialNotifications);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const refreshNotifications = async () => {
+    setError(null);
+    try {
+      const response = await fetch('http://localhost/schizotactical/backend/notificaciones.php', {
+        credentials: 'include',
+      });
+      if (!response.ok) {
+        throw new Error(`Error HTTP: ${response.status}`);
+      }
+      const data = await response.json();
+      if (data.success && Array.isArray(data.data)) {
+        setLocalNotifications(data.data);
+      } else {
+        console.error("Error o formato inválido al refrescar notificaciones:", data.message || data);
+        setLocalNotifications([]);
+      }
+    } catch (error) {
+      console.error('Error refrescando notificaciones:', error);
+      setError(error.message);
+      setLocalNotifications([]);
+    }
+  };
+
+  useEffect(() => {
+    setIsLoading(true);
+    refreshNotifications().finally(() => setIsLoading(false));
+    const interval = setInterval(refreshNotifications, 5000);
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (!isLoading) {
+       setLocalNotifications(initialNotifications);
+    }
+  }, [initialNotifications, isLoading]);
+
+  const formatDateTime = (dateString) => {
+    if (!dateString) return 'Fecha inválida';
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return 'Fecha inválida';
+      return date.toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    } catch (e) { return 'Fecha inválida'; }
+  };
+
+  if (isLoading) {
+    return <div className="notification-container"><p>Cargando notificaciones...</p></div>;
+  }
+
+  if (error) {
+     return <div className="notification-container error-message">Error: {error}</div>;
+  }
+
+  return (
+    <div className="notification-container"> {/* Asegúrate que esta clase exista si usas esta vista */}
+      <h3>Historial de Notificaciones</h3>
+      {localNotifications.length === 0 ? (
+        <p className="no-notifications">No hay notificaciones</p>
+      ) : (
+        <table className="notification-table">
+          <thead>
+            <tr>
+              <th>Mensaje</th>
+              <th>Tipo</th>
+              <th>Fecha</th>
+            </tr>
+          </thead>
+          <tbody>
+            {localNotifications.map((notification) => (
+              <tr key={notification.id} className={`notification-row-${notification.type || 'info'}`}>
+                <td className="message-cell">{notification.message}</td>
+                <td>{notification.type || 'info'}</td>
+                <td>{formatDateTime(notification.created_at)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
+  );
+};
+
+// --- Hook Personalizado (Mantenido como estaba) ---
+export const useNotificationManager = () => {
   const refreshNotifications = async () => {
     try {
       const response = await fetch('http://localhost/schizotactical/backend/notificaciones.php', {
@@ -206,16 +241,14 @@ export const useNotificationManager = () => {
         throw new Error(`Error HTTP: ${response.status}`);
       }
       const data = await response.json();
-      // Asegura devolver un array
       return (data.success && Array.isArray(data.data)) ? data.data : [];
     } catch (error) {
       console.error('Error refrescando notificaciones desde hook:', error);
-      return []; // Devuelve array vacío en error
+      return [];
     }
   };
 
-  // Función para añadir notificaciones generales
-  const addNotification = async (message, type = 'info') => { // Default a 'info'
+  const addNotification = async (message, type = 'info') => {
     if (!message) {
       console.error("Intento de añadir notificación sin mensaje.");
       return;
@@ -224,29 +257,21 @@ export const useNotificationManager = () => {
       const response = await fetch('http://localhost/schizotactical/backend/guardar_notificacion.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message, type }), // Solo envía message y type
+        body: JSON.stringify({ message, type }),
         credentials: 'include',
       });
-
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.message || `Error HTTP: ${response.status}`);
       }
-      // Opcional: podrías llamar a refreshNotifications() aquí si quieres verla inmediatamente
-      // o confiar en el polling.
     } catch (error) {
       console.error('Error añadiendo notificación desde hook:', error);
     }
   };
 
-  // Podrías añadir aquí la función deleteNotification si quieres centralizarla también
-
   return { refreshNotifications, addNotification };
 };
 
-
 // --- Exportaciones ---
-// Exporta el componente principal (si se usa)
-export default NotificationManager;
-// Exporta el panel y la función fetch (usados por AdminNavbar)
-export { NotificationPanel, fetchNotifications }; // fetchNotifications aquí es redundante si usas el hook
+export default NotificationManager; // Exporta el componente de página completa
+export { NotificationPanel }; // Exporta el componente del panel lateral

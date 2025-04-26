@@ -1,241 +1,210 @@
-/* Estilos base */
+/* NotificationManager.css - Versión Mejorada */
+
+/* --- Overlay Oscuro --- */
 .notification-overlay {
     position: fixed;
     top: 0;
-    right: 0;
-    display: flex; /* Para centrar en pantallas más grandes */
-    justify-content: flex-end; /* Al lado derecho por defecto */
-    align-items: flex-start; /* Alinea desde la parte superior */
-    width: 100%; /* Ocupa todo el ancho inicialmente */
+    left: 0;
+    width: 100%;
     height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(3px);
+    z-index: 999;
+    display: flex;
+    justify-content: center;
+    align-items: center;
     padding: 20px;
-    z-index: 1000;
-    pointer-events: none; /* Permite clics a través del overlay cuando está cerrado */
-    overflow: hidden; /* Evita el scroll del overlay */
-    transition: background-color 0.3s ease; /* Transición suave para el fondo si se usa */
-    background-color: rgba(0, 0, 0, 0.1); /* Fondo semitransparente opcional */
-}
-
-.notification-center {
-    display: flex;
-    flex-direction: column; /* Cambiamos a 'column' para que los elementos se apilen de arriba a abajo */
-    gap: 12px; /* Aumenté un poco el espacio */
-    background-color: white;
-    color: #333; /* Un color de texto más legible */
-    border-radius: 8px; /* Bordes un poco más suaves */
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); /* Sombra sutil */
-    z-index: 1001; /* Mayor prioridad que el overlay */
-    width: 90%; /* Ancho más adaptable */
-    max-width: 400px; /* Un máximo para pantallas grandes */
-    max-height: 80vh;
-    overflow-y: auto;
-    padding: 15px; /* Un poco menos de padding general */
-    pointer-events: auto; /* Permite la interacción dentro del panel */
-}
-
-.notification-header {
-    display: flex;
-    justify-content: space-between; /* Espacia el título y el botón */
-    align-items: center; /* Centra verticalmente */
-    padding: 10px 15px;
-    border-bottom: 1px solid #eee; /* Línea divisoria más clara */
-    position: sticky;
-    top: 0;
-    background-color: white;
-    z-index: 2;
-}
-
-.notification-header h3 {
-    margin: 0;
-    font-weight: 600; /* Un poco más de énfasis */
-    text-align: center;
-}
-
-.close-button {
-    background: none;
-    border: none;
-    font-size: 1.2rem; /* Tamaño del icono de cerrar */
-    cursor: pointer;
-    color: #777;
-    opacity: 0.7;
-    transition: opacity 0.2s ease;
-    padding: 5px;
-}
-
-.close-button:hover {
-    opacity: 1;
-}
-
-.notifications-container {
+    pointer-events: auto;
+    transition: all 0.3s ease;
+  }
+  
+  /* --- Centro de Notificaciones --- */
+  .notification-center {
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    padding: 10px;
-}
-
-.notification {
+    background-color: white;
+    color: #333;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+    z-index: 1000;
+    width: 90%;
+    max-width: 500px;
+    max-height: 80vh;
+    overflow: hidden;
+    transform: scale(0.98);
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+  
+  .notification-center:hover {
+    transform: scale(1);
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2);
+  }
+  
+  /* --- Cabecera --- */
+  .notification-header {
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
-    padding: 10px 12px;
-    border-radius: 6px;
-    animation: fadeIn 0.3s ease-out;
-    width: 100%;
-    box-sizing: border-box;
-    position: relative;
-    border: 1px solid #f0f0f0; /* Borde sutil para destacar */
-}
-
-.notification-content {
+    align-items: center;
+    padding: 1rem 1.5rem;
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #e9ecef;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+  }
+  
+  .notification-header h3 {
+    margin: 0;
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #2c3e50;
+  }
+  
+  .notification-header .close-button {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: #7f8c8d;
+    cursor: pointer;
+    padding: 0.25rem;
+    transition: all 0.2s ease;
+  }
+  
+  .notification-header .close-button:hover {
+    color: #e74c3c;
+    transform: rotate(90deg);
+  }
+  
+  /* --- Contenedor de Notificaciones --- */
+  .notifications-container {
+    padding: 0;
+    overflow-y: auto;
+    flex-grow: 1;
+  }
+  
+  /* --- Notificación Individual --- */
+  .notification {
+    display: flex;
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid #f1f1f1;
+    transition: all 0.2s ease;
+    background-color: white;
+  }
+  
+  .notification:hover {
+    background-color: #f8f9fa;
+    transform: translateX(3px);
+  }
+  
+  .notification-content {
     flex-grow: 1;
     display: flex;
     flex-direction: column;
-    gap: 3px;
-}
-
-.notification-message {
-    font-size: 0.9rem;
-    line-height: 1.3;
-    word-break: break-word; /* Evita que el texto largo rompa el diseño */
-}
-
-.notification-time {
-    font-size: 0.7rem;
-    color: #888;
-}
-
-.delete-button {
+    gap: 0.5rem;
+  }
+  
+  .notification-message {
+    font-size: 0.95rem;
+    line-height: 1.5;
+    color: #34495e;
+  }
+  
+  .notification-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    font-size: 0.8rem;
+    color: #7f8c8d;
+  }
+  
+  .notification-meta-item {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+  
+  .notification-time {
+    font-size: 0.75rem;
+    color: #95a5a6;
+  }
+  
+  .delete-button {
     background: none;
     border: none;
     cursor: pointer;
-    padding: 0 0 0 8px;
+    padding: 0.25rem;
     font-size: 1rem;
-    line-height: 1;
-    color: #aaa;
-    opacity: 0.6;
-    transition: opacity 0.2s ease;
-}
-
-.delete-button:hover {
-    opacity: 1;
-}
-
-/* Tipos de notificaciones - Colores más sutiles */
-.notification-success {
-    background-color: #d4edda;
-    color: #155724;
-    border-color: #c3e6cb;
-}
-
-.notification-error {
-    background-color: #f8d7da;
-    color: #721c24;
-    border-color: #f5c6cb;
-}
-
-.notification-warning {
-    background-color: #fff3cd;
-    color: #85640a;
-    border-color: #ffeeba;
-}
-
-.notification-info {
-    background-color: #e0f7fa;
-    color: #0c5460;
-    border-color: #b8daff;
-}
-
-/* Animaciones */
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(-10px); /* Animación desde arriba */
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-/* Mensaje cuando no hay notificaciones */
-.no-notifications {
-    padding: 15px;
+    color: #bdc3c7;
+    align-self: flex-start;
+    transition: all 0.2s ease;
+  }
+  
+  .delete-button:hover {
+    color: #e74c3c;
+  }
+  
+  /* --- Tipos de Notificación --- */
+  .notification-update {
+    border-left: 4px solid #3498db;
+  }
+  
+  .notification-update .notification-message {
+    color: #2980b9;
+  }
+  
+  .notification-important {
+    border-left: 4px solid #e74c3c;
+  }
+  
+  .notification-important .notification-message {
+    color: #c0392b;
+  }
+  
+  .notification-success {
+    border-left: 4px solid #2ecc71;
+  }
+  
+  .notification-success .notification-message {
+    color: #27ae60;
+  }
+  
+  /* --- Sin Notificaciones --- */
+  .no-notifications {
+    padding: 2rem;
     text-align: center;
-    color: #777;
-    font-size: 0.85rem;
-}
-
-/* Add styles for a table-like notification display */
-.notification-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 20px;
-  font-size: 1rem;
-  text-align: left;
-}
-
-.notification-table th, .notification-table td {
-  border: 1px solid #ddd;
-  padding: 8px;
-}
-
-.notification-table th {
-  background-color: #f4f4f4;
-  font-weight: bold;
-}
-
-.notification-table tr:nth-child(even) {
-  background-color: #f9f9f9;
-}
-
-.notification-table tr:hover {
-  background-color: #f1f1f1;
-}
-
-/* **Media Queries para Responsividad** */
-
-/* Para pantallas más pequeñas (móviles) */
-@media (max-width: 600px) {
+    color: #95a5a6;
+    font-size: 0.95rem;
+  }
+  
+  /* --- Error --- */
+  .notification-error {
+    padding: 1rem 1.5rem;
+    background-color: #fdecea;
+    border-left: 4px solid #e74c3c;
+    color: #c0392b;
+    margin: 1rem;
+    border-radius: 6px;
+  }
+  
+  /* --- Responsive --- */
+  @media (max-width: 600px) {
     .notification-overlay {
-        padding: 0; /* Ocupa todo el espacio sin padding */
-        align-items: flex-end; /* El panel aparece desde abajo */
+      padding: 0;
+      align-items: flex-end;
     }
-
+    
     .notification-center {
-        width: 100%; /* Ocupa todo el ancho */
-        max-width: none; /* No hay ancho máximo */
-        border-radius: 0; /* Sin bordes redondeados en pantalla completa */
-        margin-bottom: 0; /* Evita margen inferior */
-        max-height: 60vh; /* Ocupa menos de la mitad de la pantalla en vertical */
+      width: 100%;
+      max-width: none;
+      border-radius: 16px 16px 0 0;
+      max-height: 85vh;
     }
-
-    .notification-header {
-        font-size: 1.1rem;
-    }
-
-    .close-button {
-        font-size: 1.4rem;
-    }
-
+    
     .notification {
-        padding: 12px 15px;
-        font-size: 0.9rem;
+      padding: 1rem;
     }
-
-    .notification-time {
-        font-size: 0.75rem;
+    
+    .notification-message {
+      font-size: 0.9rem;
     }
-}
-
-/* Para tablets */
-@media (min-width: 601px) and (max-width: 960px) {
-    .notification-overlay {
-        padding: 15px;
-        justify-content: flex-end; /* Se mantiene a la derecha */
-    }
-
-    .notification-center {
-        width: 80%;
-        max-width: 450px;
-    }
-}
+  }

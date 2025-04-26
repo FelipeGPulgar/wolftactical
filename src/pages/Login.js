@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import '../Login.css';
+import { useNavigate, Link } from 'react-router-dom'; // Importa Link
+import '../Login.css'; // Asegúrate que la ruta sea correcta
 
 function Login() {
     const [username, setUsername] = useState('');
@@ -26,22 +26,34 @@ function Login() {
 
             // Verificar estado de la respuesta
             if (!response.ok) {
-                throw new Error(`Error HTTP: ${response.status}`);
+                // Intentar obtener mensaje de error del backend si es posible
+                let errorMsg = `Error HTTP: ${response.status}`;
+                try {
+                    const errorData = await response.json();
+                    errorMsg = errorData.message || errorMsg;
+                } catch (jsonError) {
+                    // No se pudo parsear JSON, usar mensaje HTTP
+                }
+                throw new Error(errorMsg);
             }
 
             const data = await response.json();
-            setMessage(data.message);
 
             if (data.success) {
-                // Guardar estado de autenticación
+                setMessage(data.message); // Mostrar mensaje de éxito brevemente
                 localStorage.setItem('isAdminLoggedIn', 'true');
-                
-                // Redirigir a la ruta especificada o por defecto
-                navigate(data.redirect || '/admin/productos');
+                // Pequeña pausa antes de redirigir para ver el mensaje
+                setTimeout(() => {
+                    navigate(data.redirect || '/admin/productos');
+                }, 500); // 0.5 segundos
+            } else {
+                // Si success es false, lanzar error con el mensaje del backend
+                throw new Error(data.message || 'Credenciales incorrectas');
             }
         } catch (error) {
             console.error('Error en el login:', error);
-            setMessage(error.message || 'Error al conectar con el servidor');
+            // Mostrar mensaje de error específico capturado
+            setMessage(error.message);
         } finally {
             setIsLoading(false);
         }
@@ -49,36 +61,49 @@ function Login() {
 
     return (
         <div className="login-container">
-            <form className="login-form" onSubmit={handleSubmit}>
-                <h2>Inicio De Sesión</h2>
-                <div className="form-group">
-                    <label>Usuario:</label>
-                    <input
-                        type="text"
-                        value={username}
-                        onChange={(e) => setUsername(e.target.value)}
-                        required
-                        autoFocus
-                    />
-                </div>
-                <div className="form-group">
-                    <label>Contraseña:</label>
-                    <input
-                        type="password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        required
-                    />
-                </div>
-                <button type="submit" disabled={isLoading}>
-                    {isLoading ? 'Cargando...' : 'Ingresar'}
-                </button>
-                {message && (
-                    <div className={`message ${message.includes('éxito') ? 'success' : 'error'}`}>
-                        {message}
+            <div className="login-box"> {/* Contenedor extra para centrar y estilizar */}
+                <form className="login-form" onSubmit={handleSubmit}>
+                    <h2>Acceso Administrador</h2> {/* Título más específico */}
+                    <div className="form-group">
+                        {/* <label htmlFor="username">Usuario:</label> */} {/* Opcional si usas placeholder */}
+                        <input
+                            id="username" // Añadir id para el label (si se usa)
+                            type="text"
+                            value={username}
+                            onChange={(e) => setUsername(e.target.value)}
+                            placeholder="Nombre de usuario" // Placeholder como alternativa a label
+                            required
+                            autoFocus
+                        />
                     </div>
-                )}
-            </form>
+                    <div className="form-group">
+                        {/* <label htmlFor="password">Contraseña:</label> */} {/* Opcional */}
+                        <input
+                            id="password" // Añadir id
+                            type="password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            placeholder="Contraseña" // Placeholder
+                            required
+                        />
+                    </div>
+                    {/* Mensaje de error/éxito */}
+                    {message && (
+                        // Determinar clase basado en si el mensaje contiene 'éxito' o no
+                        <div className={`message ${message.toLowerCase().includes('éxito') ? 'success' : 'error'}`}>
+                            {message}
+                        </div>
+                    )}
+                    <button type="submit" className="btn-login" disabled={isLoading}>
+                        {isLoading ? 'Verificando...' : 'Ingresar'}
+                    </button>
+
+                    {/* Botón para volver a la tienda */}
+                    <Link to="/" className="btn-back-store">
+                        Volver a la Tienda
+                    </Link>
+                </form>
+            </div>
         </div>
     );
 }
