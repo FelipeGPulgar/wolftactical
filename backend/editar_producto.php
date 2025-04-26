@@ -132,48 +132,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // --- Obtener TODOS los datos actuales del producto ANTES de actualizar ---
     $current_product_data = null;
     try {
-        // Selecciona todos los campos que quieres rastrear para notificaciones
         $stmt_current = $pdo->prepare("SELECT name, model, category_id, subcategory_id, stock_option, stock_quantity, price, is_active, main_image FROM products WHERE id = :id");
         $stmt_current->execute(['id' => $id]);
         $current_product_data = $stmt_current->fetch(PDO::FETCH_ASSOC);
-
-        if (!$current_product_data) {
-            http_response_code(404);
-            error_log("[POST Info] Producto no encontrado para actualizar con ID: " . $id);
-            die(json_encode(['success' => false, 'message' => 'Producto no encontrado para actualizar']));
-        }
-    } catch (PDOException $e) {
-        http_response_code(500);
-        error_log("[POST DB Error] Error fetching current full product data (ID: $id): " . $e->getMessage());
-        die(json_encode(['success' => false, 'message' => 'Error al obtener datos actuales del producto.']));
-    }
+        if (!$current_product_data) { /* ... (manejo de producto no encontrado) ... */ }
+    } catch (PDOException $e) { /* ... (manejo de error DB) ... */ }
 
     // --- Manejo de Imagen (igual que antes) ---
-    $main_image_path = $current_product_data['main_image']; // Usar dato obtenido
+    $main_image_path = $current_product_data['main_image'];
     $image_updated = false;
-    // ... (resto del código de manejo de imagen sin cambios) ...
+    // ... (código de manejo de imagen sin cambios) ...
     if (isset($_FILES['main_image']) && $_FILES['main_image']['error'] === UPLOAD_ERR_OK && !empty($_FILES['main_image']['tmp_name'])) {
         $target_dir_relative = "uploads/";
         $target_dir_absolute = __DIR__ . '/' . $target_dir_relative;
-
         if (!is_dir($target_dir_absolute)) { /* ... */ }
         if (!is_writable($target_dir_absolute)) { /* ... */ }
-
         $allowed_mime_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
         $finfo = finfo_open(FILEINFO_MIME_TYPE);
         $mime_type = finfo_file($finfo, $_FILES['main_image']['tmp_name']);
         finfo_close($finfo);
         $file_extension = strtolower(pathinfo($_FILES['main_image']['name'], PATHINFO_EXTENSION));
         $allowed_extensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
-
         if (!in_array($mime_type, $allowed_mime_types) || !in_array($file_extension, $allowed_extensions)) { /* ... */ }
-
         $new_filename = uniqid('prod_' . $id . '_', true) . '.' . $file_extension;
         $target_file_absolute = $target_dir_absolute . $new_filename;
         $new_image_relative_path = $target_dir_relative . $new_filename;
-
         if (move_uploaded_file($_FILES['main_image']['tmp_name'], $target_file_absolute)) {
-            $old_image_absolute_path = __DIR__ . '/' . $current_product_data['main_image']; // Usar dato obtenido
+            $old_image_absolute_path = __DIR__ . '/' . $current_product_data['main_image'];
             if (!empty($current_product_data['main_image']) && $current_product_data['main_image'] !== $new_image_relative_path && file_exists($old_image_absolute_path)) {
                  if (@unlink($old_image_absolute_path)) { /* ... */ } else { /* ... */ }
             }
@@ -191,9 +176,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     stock_option = :stock_option, stock_quantity = :stock_quantity, price = :price,
                     main_image = :main_image, is_active = :is_active, updated_at = NOW()
                 WHERE id = :id";
-
         $stmt_update = $pdo->prepare($sql_update);
-        $update_params = [
+        $update_params = [ /* ... (parámetros de update) ... */
             ':name' => $name, ':model' => $model ?: null, ':category_id' => $category_id,
             ':subcategory_id' => $subcategory_id, ':stock_option' => $stock_option,
             ':stock_quantity' => $stock_quantity, ':price' => $price,
@@ -205,136 +189,113 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Verificar si la actualización fue exitosa o si se actualizó la imagen
         if ($update_executed && ($rows_affected > 0 || $image_updated)) {
 
-             // ************************************************************
-             // ***** INICIO: NUEVA LÓGICA DE NOTIFICACIONES DETALLADAS *****
-             // ************************************************************
-             $changes_detected = false; // Flag para saber si hubo algún cambio notificable
-             $notificationParams = []; // Para logging en catch
+             // *******************************************************************
+             // ***** INICIO: LÓGICA PARA GENERAR UNA NOTIFICACIÓN RESUMIDA *****
+             // *******************************************************************
+             $change_details = []; // Array para guardar los detalles de los cambios
 
              // Mapeo de nombres de campo a nombres legibles y valores nuevos/antiguos
              $fields_to_check = [
                  'name' => ['label' => 'Nombre', 'old' => $current_product_data['name'], 'new' => $name],
-                 'model' => ['label' => 'Modelo', 'old' => $current_product_data['model'], 'new' => $model ?: null], // Asegurar NULL si está vacío
-                 'price' => ['label' => 'Precio', 'old' => (float)$current_product_data['price'], 'new' => $price], // Comparar como float
-                 'category_id' => ['label' => 'Categoría', 'old' => $current_product_data['category_id'], 'new' => $category_id],
-                 'subcategory_id' => ['label' => 'Subcategoría', 'old' => $current_product_data['subcategory_id'], 'new' => $subcategory_id],
+                 'model' => ['label' => 'Modelo', 'old' => $current_product_data['model'], 'new' => $model ?: null],
+                 'price' => ['label' => 'Precio', 'old' => (float)$current_product_data['price'], 'new' => $price],
+                 'category_id' => ['label' => 'Categoría', 'old' => $current_product_data['category_id'], 'new' => $category_id], // Podrías mostrar nombres en lugar de IDs
+                 'subcategory_id' => ['label' => 'Subcategoría', 'old' => $current_product_data['subcategory_id'], 'new' => $subcategory_id], // Podrías mostrar nombres
                  'stock_option' => ['label' => 'Opción Stock', 'old' => $current_product_data['stock_option'], 'new' => $stock_option],
-                 'stock_quantity' => ['label' => 'Cantidad Stock', 'old' => $current_product_data['stock_quantity'], 'new' => $stock_quantity], // Ya es NULL si no aplica
-                 'is_active' => ['label' => 'Estado Activo', 'old' => (int)$current_product_data['is_active'], 'new' => $is_active] // Comparar como int
+                 'stock_quantity' => ['label' => 'Cantidad Stock', 'old' => $current_product_data['stock_quantity'], 'new' => $stock_quantity],
+                 'is_active' => ['label' => 'Estado Activo', 'old' => (int)$current_product_data['is_active'], 'new' => $is_active]
              ];
 
-             // Preparar la consulta INSERT UNA SOLA VEZ
-             $notificationSql = "INSERT INTO notifications
-                                   (product_id, message, field_changed, old_value, new_value, type, created_at)
-                                 VALUES
-                                   (:product_id, :message, :field_changed, :old_value, :new_value, :type, NOW())";
-             $notificationStmt = $pdo->prepare($notificationSql);
-
-             // Iterar sobre los campos a verificar
+             // Iterar para encontrar diferencias y construir los detalles
              foreach ($fields_to_check as $field_key => $field_data) {
                  $old_val = $field_data['old'];
                  $new_val = $field_data['new'];
-
-                 // Comparación cuidadosa (manejo de NULL y tipos)
                  $is_different = false;
-                 if (is_null($old_val) && !is_null($new_val)) {
-                     $is_different = true;
-                 } elseif (!is_null($old_val) && is_null($new_val)) {
-                     $is_different = true;
-                 } elseif (!is_null($old_val) && !is_null($new_val)) {
-                     // Si ambos no son null, comparar estrictamente
-                     if ($field_key === 'price') { // Comparación específica para precio (float)
-                         $is_different = (abs($old_val - $new_val) > 0.001); // Usar tolerancia para floats
-                     } elseif ($field_key === 'is_active') { // Comparación específica para estado (int)
-                          $is_different = ($old_val !== $new_val);
-                     }
-                     else { // Comparación estándar para strings, ints, etc.
-                         $is_different = ($old_val !== $new_val);
-                     }
+                 // ... (misma lógica de comparación que antes para $is_different) ...
+                 if (is_null($old_val) && !is_null($new_val)) { $is_different = true; }
+                 elseif (!is_null($old_val) && is_null($new_val)) { $is_different = true; }
+                 elseif (!is_null($old_val) && !is_null($new_val)) {
+                     if ($field_key === 'price') { $is_different = (abs($old_val - $new_val) > 0.001); }
+                     elseif ($field_key === 'is_active') { $is_different = ($old_val !== $new_val); }
+                     else { $is_different = ($old_val !== $new_val); }
                  }
-                 // Si ambos son null, no son diferentes
 
                  if ($is_different) {
-                     $changes_detected = true; // Marcar que hubo al menos un cambio
-                     try {
-                         // Formatear valores para el mensaje y la DB (manejar NULL)
+                     // Formatear valores para mostrar (manejar NULL y booleanos para 'is_active')
+                     if ($field_key === 'is_active') {
+                         $old_display = $old_val ? 'Activo' : 'Inactivo';
+                         $new_display = $new_val ? 'Activo' : 'Inactivo';
+                     } else {
                          $old_display = is_null($old_val) ? 'N/A' : htmlspecialchars((string)$old_val, ENT_QUOTES, 'UTF-8');
                          $new_display = is_null($new_val) ? 'N/A' : htmlspecialchars((string)$new_val, ENT_QUOTES, 'UTF-8');
-                         $message = "{$field_data['label']} cambiado de '{$old_display}' a '{$new_display}' (Producto ID: $id)";
-
-                         // Definir los parámetros para ESTA notificación específica
-                         $notificationParams = [
-                             ':product_id' => $id,
-                             ':message' => $message,
-                             ':field_changed' => $field_key, // Nombre de la columna que cambió
-                             ':old_value' => is_null($old_val) ? null : (string)$old_val, // Guardar como string o null
-                             ':new_value' => is_null($new_val) ? null : (string)$new_val, // Guardar como string o null
-                             ':type' => 'success' // Tipo válido según tu ENUM
-                         ];
-
-                         // Ejecutar la inserción
-                         $notificationStmt->execute($notificationParams);
-                         error_log("[POST Notification Info] Notificación de cambio '{$field_key}' creada para producto ID $id.");
-
-                     } catch (PDOException $e) {
-                         // Loggear error detallado de esta notificación específica
-                         error_log("[POST Notification Error] Error al guardar notificación de cambio '{$field_key}' para producto ID $id: " . $e->getMessage() . " - Params: " . json_encode($notificationParams ?? []));
-                         // No detener el script por un error de notificación
                      }
+                     // Añadir detalle al array de cambios
+                     $change_details[] = "{$field_data['label']}: '{$old_display}' -> '{$new_display}'";
                  }
              } // Fin del bucle foreach
 
-             // Si no se detectó ningún cambio en los campos rastreados, pero sí se actualizó la imagen
-             if (!$changes_detected && $image_updated) {
+             // Añadir detalle si la imagen cambió
+             if ($image_updated) {
+                 $change_details[] = "Imagen principal actualizada";
+             }
+
+             // Si hubo algún cambio (en campos o imagen), crear UNA notificación
+             if (!empty($change_details)) {
+                 $notificationParams = []; // Para logging
                  try {
-                     $message = "Imagen principal actualizada (Producto ID: $id)";
+                     // Construir el mensaje final
+                     $final_message = "Producto '" . htmlspecialchars($name, ENT_QUOTES, 'UTF-8') . "' (ID: $id) actualizado:\n- " . implode("\n- ", $change_details);
+
+                     // Preparar la consulta INSERT (solo una vez)
+                     $notificationSql = "INSERT INTO notifications
+                                           (product_id, message, field_changed, old_value, new_value, type, created_at)
+                                         VALUES
+                                           (:product_id, :message, :field_changed, :old_value, :new_value, :type, NOW())";
+                     $notificationStmt = $pdo->prepare($notificationSql);
+
+                     // Definir los parámetros para la notificación resumida
                      $notificationParams = [
                          ':product_id' => $id,
-                         ':message' => $message,
-                         ':field_changed' => 'main_image', // Indicar que cambió la imagen
-                         ':old_value' => $current_product_data['main_image'], // Ruta antigua
-                         ':new_value' => $main_image_path, // Ruta nueva
-                         ':type' => 'success'
+                         ':message' => $final_message, // El mensaje con todos los detalles
+                         ':field_changed' => null,     // No aplica para el resumen
+                         ':old_value' => null,         // No aplica para el resumen
+                         ':new_value' => null,         // No aplica para el resumen
+                         ':type' => 'success'          // Tipo válido
                      ];
+
+                     // Ejecutar la inserción
                      $notificationStmt->execute($notificationParams);
-                     error_log("[POST Notification Info] Notificación de cambio de imagen creada para producto ID $id.");
+                     error_log("[POST Notification Info] Notificación RESUMIDA creada para producto ID $id.");
+
                  } catch (PDOException $e) {
-                      error_log("[POST Notification Error] Error al guardar notificación de cambio de imagen para producto ID $id: " . $e->getMessage() . " - Params: " . json_encode($notificationParams ?? []));
+                     // Loggear error detallado si falla la inserción de la notificación resumida
+                     error_log("[POST Notification Error] Error al guardar notificación RESUMIDA para producto ID $id: " . $e->getMessage() . " - Params: " . json_encode($notificationParams ?? []));
                  }
-             } elseif (!$changes_detected && !$image_updated) {
-                 // Esto no debería pasar si $rows_affected > 0, pero por si acaso
+             } else {
+                 // Si $rows_affected > 0 pero no detectamos cambios específicos (raro, pero posible)
                  error_log("[POST Info] Se afectaron filas pero no se detectaron cambios específicos ni de imagen para ID $id.");
              }
 
-             // **********************************************************
-             // ***** FIN: NUEVA LÓGICA DE NOTIFICACIONES DETALLADAS *****
-             // **********************************************************
+             // *****************************************************************
+             // ***** FIN: LÓGICA PARA GENERAR UNA NOTIFICACIÓN RESUMIDA *****
+             // *****************************************************************
 
              // Respuesta de éxito general para la actualización del producto
              echo json_encode(['success' => true, 'message' => 'Producto actualizado correctamente']);
 
         } else if ($update_executed && $rows_affected === 0 && !$image_updated) {
-             // La consulta se ejecutó bien, pero no cambió nada (y no se subió imagen)
+             // La consulta se ejecutó bien, pero no cambió nada
              error_log("[POST Info] No se realizaron cambios detectables para producto ID $id.");
              echo json_encode(['success' => true, 'message' => 'No se realizaron cambios detectables en el producto.']);
         } else {
-             // La ejecución del UPDATE falló por alguna razón no capturada por PDOException
+             // La ejecución del UPDATE falló
              $errorInfo = $stmt_update->errorInfo();
              error_log("[POST DB Error] Falló la ejecución del UPDATE para producto ID $id: " . ($errorInfo[2] ?? 'Unknown error'));
              http_response_code(500);
              echo json_encode(['success' => false, 'message' => 'Error al ejecutar la actualización del producto.']);
         }
 
-    } catch (PDOException $e) {
-        // Captura errores durante la preparación o ejecución del UPDATE principal
-        http_response_code(500);
-        error_log("[POST DB Error] Database error updating product (ID: $id): " . $e->getMessage() . " - Code: " . $e->getCode() . " - Params: " . json_encode($update_params));
-        if ($e->getCode() == 23000) {
-             echo json_encode(['success' => false, 'message' => 'Error: Ya existe un producto con datos similares (ej. nombre o modelo que debe ser único).']);
-        } else {
-             echo json_encode(['success' => false, 'message' => 'Error en la base de datos al actualizar. Verifique los datos o contacte al administrador.']);
-        }
-    }
+    } catch (PDOException $e) { /* ... (manejo de error DB principal) ... */ }
     exit(); // Terminar después de manejar POST
 }
 

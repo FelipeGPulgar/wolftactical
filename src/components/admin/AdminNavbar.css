@@ -1,224 +1,244 @@
 /* AdminNavbar.css */
+
+/* --- Barra de Navegación Principal --- */
 .admin-navbar {
-  background-color: #333;
+  background-color: #333; /* Fondo oscuro para la navbar */
   color: white;
-  padding: 1rem;
+  padding: 0.75rem 1.5rem; /* Ajuste de padding */
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end; /* Alinea contenido a la derecha por defecto */
   align-items: center;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  position: relative; /* Necesario para posicionar elementos hijos absolutos */
+  z-index: 100; /* Asegura que esté sobre el contenido normal */
 }
 
 .admin-navbar-content {
   display: flex;
   align-items: center;
+  gap: 1rem; /* Espacio entre elementos si añades más */
 }
 
-/* Centrar la campana de notificaciones */
+/* --- Área y Botón de la Campana --- */
+.notification-area {
+  position: relative; /* Contenedor para el contador si es necesario */
+}
+
 .notification-bell {
-  position: relative;
+  background: none;
+  border: none;
+  color: white;
   cursor: pointer;
+  padding: 0.5rem; /* Área de clic */
   display: flex;
+  align-items: center;
   justify-content: center;
-  align-items: center;
-  height: 100%;
+  position: relative; /* Para el contador */
 }
 
-.notification-list {
+.notification-bell svg {
+  width: 24px; /* Tamaño del icono SVG */
+  height: 24px;
+  fill: none; /* Asegúrate que no tenga relleno por defecto */
+  stroke: currentColor; /* Usa el color del texto (blanco) */
+}
+
+.notification-count {
   position: absolute;
-  top: 50px; /* Ajustado para mayor separación */
+  top: 0;
   right: 0;
-  background-color: white;
-  color: black;
-  border: 1px solid #ddd;
-  border-radius: 5px;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-  z-index: 1000;
-  width: 320px; /* Ajustado para mayor espacio */
-  max-height: 400px;
-  overflow-y: auto;
-}
-
-.notification {
-  margin-bottom: 10px; /* Add spacing between notifications */
-  padding: 10px;
-  border: 1px solid #ddd;
-  border-radius: 5px;
-  background-color: #fff;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.notification:last-child {
-  border-bottom: none;
-}
-
-.notification-success {
-  background-color: #4CAF50; /* Verde más suave */
-  color: #F9F9F9; /* Blanco más claro */
-}
-
-.notification-error {
-  background-color: #E53935; /* Rojo más suave */
-  color: #FFFFFF;
-}
-
-.notification-warning {
-  background-color: #FFB300; /* Amarillo más suave */
-  color: #212121; /* Gris oscuro */
-}
-
-.notification-info {
-  background-color: #29B6F6; /* Azul más suave */
-  color: #FFFFFF;
-}
-
-.close-button {
-  background: none;
-  border: none;
+  background-color: #dc3545; /* Rojo para el contador */
   color: white;
-  font-size: 1rem;
-  cursor: pointer;
-}
-
-/* Ajustar tamaños de las imágenes de las notificaciones */
-.notification-bell img {
-  width: 30px;
-  height: 30px;
-}
-
-/* Centrar la imagen de la campana de notificaciones */
-.notification-bell img {
-  display: block;
-  margin: 0 auto;
-}
-
-.notification-list img {
-  width: 20px;
-  height: 20px;
-  margin-right: 10px;
-}
-
-/* Estilo para oscurecer el fondo cuando el centro de notificaciones está abierto */
-.notification-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.85); /* Darker semi-transparent black */
-  z-index: 999; /* Debe estar por debajo del centro de notificaciones */
-  display: none; /* Oculto por defecto */
-}
-
-.notification-overlay.active {
-  display: block; /* Mostrar cuando está activo */
-}
-
-/* Estilo para el centro de notificaciones */
-.notification-center {
-  display: flex;
-  flex-direction: column; /* Stack notifications vertically */
-  gap: 10px; /* Add spacing between notifications */
-  background-color: #f4f4f4; /* Light gray background for better visibility */
-  border: 1px solid #ccc; /* Subtle border */
-  border-radius: 8px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-  padding: 16px;
-  max-height: 400px;
-  overflow-y: auto;
-}
-
-.notification-center .notification {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 10px;
-  border-bottom: 1px solid #ddd;
-}
-
-.notification-center .notification:last-child {
-  border-bottom: none;
-}
-
-.notification-center .close-button {
-  background: none;
-  border: none;
-  color: #6c757d; /* Gris más claro */
-  font-size: 1.2rem;
-  cursor: pointer;
-}
-
-.notification-center .close-button:hover {
-  color: #343a40; /* Gris más oscuro */
-}
-
-.notification-center .delete-button {
-  background-color: #e74c3c; /* Vibrant red for delete button */
-  color: white;
-  border: none;
-  border-radius: 5px;
-  padding: 5px 10px;
-  cursor: pointer;
-}
-
-.notification-center .delete-button:hover {
-  background-color: #c0392b; /* Darker red on hover */
-}
-
-.notification-header {
-  background-color: #333; /* Dark background for header */
-  padding: 10px;
-  border-radius: 5px 5px 0 0;
-  font-size: 1.2rem;
-  text-align: center;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-}
-
-.close-button {
-  background: none;
-  border: none;
-  font-size: 16px;
-  cursor: pointer;
-}
-
-/* Center and enlarge the text for 'Notificaciones' */
-.notification-header h3 {
-  text-align: center;
-  font-size: 1.8rem; /* Increase font size */
+  border-radius: 50%;
+  padding: 0.1em 0.4em; /* Ajusta para que sea pequeño */
+  font-size: 0.7rem;
   font-weight: bold;
-  margin: 0;
+  line-height: 1;
+  min-width: 16px; /* Ancho mínimo */
+  text-align: center;
+  transform: translate(40%, -40%); /* Ajusta posición */
 }
 
-/* Add styles to darken the background when the notification center is open */
+/* --- Overlay Oscuro --- */
 .notification-overlay {
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(0, 0, 0, 0.85); /* Darker semi-transparent black */
-  z-index: 999; /* Ensure it appears above other elements */
+  background-color: rgba(0, 0, 0, 0.6); /* Negro semi-transparente */
+  z-index: 999; /* Debajo del centro, sobre el resto */
+  /* display: block/none será manejado por React */
 }
 
+/* --- Centro de Notificaciones (Panel) --- */
 .notification-center {
   position: fixed;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  background-color: white;
-  z-index: 1000; /* Ensure it appears above the overlay */
-  padding: 20px;
+  width: 90%; /* Ancho adaptable */
+  max-width: 450px; /* Ancho máximo */
+  max-height: 80vh; /* Altura máxima */
+  background-color: white; /* Fondo blanco */
+  color: #333; /* Texto oscuro */
   border-radius: 8px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+  z-index: 1000; /* Encima del overlay */
+  display: flex;
+  flex-direction: column; /* Apila header y lista */
+  overflow: hidden; /* Evita que el contenido se salga del borde redondeado */
 }
 
-/* Prevent interaction with other elements when the overlay is active */
-.notification-overlay.active ~ * {
-  pointer-events: none;
+/* --- Cabecera del Panel --- */
+.notification-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background-color: #f8f9fa; /* Fondo ligeramente gris para la cabecera */
+  border-bottom: 1px solid #dee2e6; /* Línea divisoria */
+}
+
+.notification-header h3 {
+  margin: 0;
+  font-size: 1.1rem; /* Tamaño del título */
+  font-weight: 600;
+}
+
+.notification-header .close-button {
+  background: none;
+  border: none;
+  font-size: 1.5rem; /* Tamaño del botón 'X' */
+  line-height: 1;
+  color: #6c757d; /* Color gris */
+  cursor: pointer;
+  padding: 0.25rem;
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
+}
+
+.notification-header .close-button:hover {
+  opacity: 1;
+}
+
+/* --- Lista de Notificaciones --- */
+.notification-list {
+  padding: 0.5rem 1rem 1rem 1rem; /* Padding alrededor de la lista */
+  overflow-y: auto; /* Scroll si hay muchas notificaciones */
+  flex-grow: 1; /* Ocupa el espacio restante */
+}
+
+/* --- Estilo Individual de Notificación DENTRO del Panel --- */
+.notification-center .notification {
+  background-color: #fff; /* Fondo blanco por defecto */
+  border: 1px solid #eee;
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 0.75rem; /* Espacio entre notificaciones */
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start; /* Alinea al inicio por si el texto es largo */
+  gap: 0.75rem; /* Espacio entre mensaje y botón */
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: background-color 0.2s ease;
+}
+.notification-center .notification:last-child {
+  margin-bottom: 0; /* Sin margen inferior en la última */
+}
+
+.notification-center .notification span {
+  flex-grow: 1; /* El mensaje ocupa el espacio */
+  font-size: 0.9rem;
+  line-height: 1.4;
+  word-break: break-word; /* Evita desbordamiento de texto largo */
+}
+
+/* --- Botón Eliminar DENTRO del Panel --- */
+.notification-center .delete-button {
+  background-color: #e74c3c; /* Rojo */
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 0.3rem 0.6rem;
+  font-size: 0.8rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  flex-shrink: 0; /* Evita que el botón se encoja */
+}
+
+.notification-center .delete-button:hover {
+  background-color: #c0392b; /* Rojo más oscuro */
+}
+
+/* --- Tipos de Notificación DENTRO del Panel (Colores) --- */
+/* Usando colores más sutiles para el fondo dentro del panel */
+.notification-center .notification-success {
+  background-color: #d4edda;
+  border-left: 4px solid #28a745; /* Borde izquierdo verde */
+  color: #155724;
+}
+.notification-center .notification-success .delete-button {
+  background-color: #28a745;
+}
+.notification-center .notification-success .delete-button:hover {
+  background-color: #218838;
+}
+
+.notification-center .notification-error {
+  background-color: #f8d7da;
+  border-left: 4px solid #dc3545; /* Borde izquierdo rojo */
+  color: #721c24;
+}
+.notification-center .notification-error .delete-button {
+  background-color: #dc3545;
+}
+.notification-center .notification-error .delete-button:hover {
+  background-color: #c82333;
+}
+
+.notification-center .notification-warning {
+  background-color: #fff3cd;
+  border-left: 4px solid #ffc107; /* Borde izquierdo amarillo */
+  color: #856404;
+}
+.notification-center .notification-warning .delete-button {
+  background-color: #ffc107;
+  color: #212529; /* Texto oscuro para contraste */
+}
+.notification-center .notification-warning .delete-button:hover {
+  background-color: #e0a800;
+}
+
+.notification-center .notification-info {
+  background-color: #d1ecf1;
+  border-left: 4px solid #17a2b8; /* Borde izquierdo azul info */
+  color: #0c5460;
+}
+.notification-center .notification-info .delete-button {
+  background-color: #17a2b8;
+}
+.notification-center .notification-info .delete-button:hover {
+  background-color: #138496;
+}
+
+/* --- Mensaje "No hay notificaciones" --- */
+.no-notifications {
+  text-align: center;
+  padding: 1.5rem;
+  color: #6c757d; /* Gris */
+  font-size: 0.9rem;
+}
+
+/* --- Mensaje de Error (si ocurre al cargar/eliminar) --- */
+.notification-error-message {
+  background-color: #f8d7da;
+  color: #721c24;
+  padding: 0.75rem 1rem;
+  margin: 0 1rem 0.5rem 1rem; /* Margen dentro del panel */
+  border: 1px solid #f5c6cb;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  text-align: center;
 }
