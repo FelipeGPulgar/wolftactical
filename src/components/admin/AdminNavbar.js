@@ -46,23 +46,42 @@ const AdminNavbar = () => {
         headers: {
           'Content-Type': 'application/json',
         },
+        // Asegúrate de enviar credenciales si tu backend las necesita para la sesión
+        credentials: 'include',
         body: JSON.stringify({ id }),
       });
 
-      if (!response.ok) {
-        throw new Error('Error al eliminar la notificación en la base de datos');
+      // Intenta obtener el cuerpo de la respuesta, incluso si no es 'ok'
+      let data = {}; // Inicializa data
+      try {
+          data = await response.json(); // Intenta parsear como JSON
+      } catch (jsonError) {
+          // Si falla el JSON, lee como texto (útil para errores 500 con HTML)
+          const textResponse = await response.text();
+          console.error("Respuesta no JSON del endpoint de eliminación:", textResponse.substring(0, 500)); // Loguea parte de la respuesta
+          // Asigna un mensaje de error basado en el status si no hay JSON
+          data = { success: false, message: `Error ${response.status}: Respuesta no válida del servidor.` };
       }
 
-      const data = await response.json();
-      if (data.success) {
-        setNotifications((prev) => prev.filter((notification) => notification.id !== id));
-      } else {
-        console.error('Error del backend:', data.message);
+      // Ahora verifica si la respuesta de red fue exitosa
+      if (!response.ok) {
+        // Lanza un error usando el mensaje del backend si existe, sino uno genérico
+        throw new Error(data.message || `Error HTTP ${response.status}`);
       }
+
+      // Si response.ok es true, asumimos que data.success también lo es (según el PHP)
+      // No es estrictamente necesario volver a verificar data.success aquí si confías en tu backend
+      console.log(`Notificación ID ${id} eliminada correctamente por backend. Actualizando UI...`);
+      setNotifications((prev) => prev.filter((notification) => notification.id !== id));
+
     } catch (error) {
-      console.error('Error al eliminar la notificación:', error);
+      // Muestra el mensaje de error específico capturado
+      console.error('Error al eliminar la notificación:', error.message || error);
+      // Considera mostrar este error al usuario de forma más visible si es necesario
+      // alert(`Error: ${error.message || 'No se pudo eliminar la notificación.'}`);
     }
   };
+
 
   const getNotificationBellIcon = () => {
     if (notifications.length > 0) {
