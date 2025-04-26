@@ -1,0 +1,128 @@
+/* src/components/ProductCard.css */
+
+/* --- Estilos para el Enlace/Contenedor de la Tarjeta --- */
+.product-card-link {
+    text-decoration: none; /* Quita el subrayado del enlace */
+    color: inherit;      /* Hereda el color del texto normal */
+    display: block;      /* Hace que el enlace ocupe el espacio de la tarjeta */
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    border-radius: 8px; /* Redondeado para el efecto hover */
+    height: 100%; /* Asegura que el enlace ocupe toda la altura de la celda del grid */
+  }
+  
+  .product-card-link:hover {
+    transform: translateY(-5px); /* Eleva ligeramente la tarjeta */
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1); /* Sombra más pronunciada */
+  }
+  
+  /* --- Estilos para la Tarjeta Individual --- */
+  .product-card {
+    border: 1px solid #e2e8f0; /* Borde gris claro */
+    border-radius: 8px;
+    overflow: hidden; /* Asegura que la imagen no se salga */
+    background-color: #fff;
+    display: flex;
+    flex-direction: column;
+    height: 100%; /* Para que todas las tarjetas tengan la misma altura dentro del enlace */
+  }
+  
+  /* --- Contenedor de la Imagen --- */
+  .product-card-image-container {
+    width: 100%;
+    aspect-ratio: 1 / 1; /* Mantiene la imagen cuadrada */
+    overflow: hidden;
+    background-color: #f8f9fa; /* Color de fondo mientras carga la imagen */
+  }
+  
+  /* --- Imagen del Producto --- */
+  .product-card-image {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* Escala la imagen para cubrir sin distorsión */
+    transition: transform 0.3s ease;
+  }
+  
+  .product-card-link:hover .product-card-image {
+    transform: scale(1.05); /* Efecto zoom suave en la imagen */
+  }
+  
+  /* --- Información del Producto (Texto) --- */
+  .product-card-info {
+    padding: 0.8rem 1rem 1rem 1rem; /* Ajuste de padding */
+    text-align: center;
+    flex-grow: 1; /* Permite que esta sección crezca */
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between; /* Empuja el precio hacia abajo */
+  }
+  
+  /* --- Nombre del Producto --- */
+  .product-card-name {
+    font-size: 0.95rem; /* Ligeramente más pequeño */
+    font-weight: 600;
+    color: #1a202c;
+    margin-top: 0;
+    margin-bottom: 0.4rem;
+    /* Limitar a 2 líneas con puntos suspensivos */
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-height: 2.7em; /* Altura mínima ajustada para 2 líneas de 0.95rem */
+    line-height: 1.35; /* Ajuste de interlineado */
+  }
+  
+  /* --- Categoría/Subcategoría (Opcional) --- */
+  .product-card-category,
+  .product-card-subcategory {
+    font-size: 0.75rem; /* Más pequeño */
+    color: #718096;
+    margin-bottom: 0.4rem;
+  }
+  
+  /* --- Precio del Producto --- */
+  .product-card-price {
+    font-size: 1.05rem; /* Ligeramente más pequeño */
+    font-weight: bold;
+    color: #2d3748;
+    margin-top: auto; /* Empuja hacia abajo */
+    margin-bottom: 0;
+  }
+  
+  /* --- Contenedor de la Lista de Productos (¡IMPORTANTE!) --- */
+  /* Estos estilos deben aplicarse al div con className="product-list"
+     en tu componente ProductListPage.js. Puedes ponerlos en
+     ProductListPage.css o en tu archivo CSS global. */
+  .product-list {
+    display: grid;
+    /* Crea columnas responsivas:
+       - Mínimo 220px de ancho por tarjeta.
+       - Se ajustan automáticamente para llenar el espacio (1fr).
+       - El número de columnas cambia según el ancho de la pantalla. */
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 1.5rem; /* Espacio entre las tarjetas (horizontal y vertical) */
+    padding: 1.5rem; /* Espacio alrededor de toda la cuadrícula */
+  }
+  
+  /* Media Query opcional para ajustar en pantallas muy pequeñas */
+  @media (max-width: 500px) {
+    .product-list {
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); /* Tarjetas más pequeñas */
+      gap: 1rem; /* Menos espacio */
+      padding: 1rem;
+    }
+    .product-card-info {
+      padding: 0.6rem 0.8rem 0.8rem 0.8rem;
+    }
+    .product-card-name {
+      font-size: 0.85rem;
+      min-height: 2.5em;
+    }
+    .product-card-price {
+      font-size: 1rem;
+    }
+  }
+  
+  
