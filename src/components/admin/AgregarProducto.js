@@ -15,7 +15,11 @@ function AgregarProducto() {
     price: '',
     main_image: null, // Para el archivo de imagen principal
     image_1: null,    // Para el archivo de imagen adicional 1
-    image_2: null     // Para el archivo de imagen adicional 2
+    image_2: null,    // Para el archivo de imagen adicional 2
+    descripcion: '',
+    diseno: '',
+    materiales: '',
+    incluye: ''
     // Se eliminan new_category_name y new_subcategory_name ya que el backend no parece manejarlos
   });
 
@@ -24,6 +28,9 @@ function AgregarProducto() {
   const [imagePreview, setImagePreview] = useState(null); // Vista previa solo para imagen principal
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null); // Para mostrar errores en la UI
+  const [colors, setColors] = useState([]); // Array to manage colors
+  const [newCategory, setNewCategory] = useState(''); // For creating new categories
+  const [newSubcategory, setNewSubcategory] = useState(''); // For creating new subcategories
 
   // --- Efecto para Cargar Categorías Iniciales ---
   useEffect(() => {
@@ -113,6 +120,124 @@ function AgregarProducto() {
       reader.readAsDataURL(file);
     } else if (name === 'main_image' && !file) {
       setImagePreview(null); // Limpia la vista previa si se cancela la selección
+    }
+  };
+
+  // Add a new color
+  const handleAddColor = () => {
+    if (colors.length < 8) {
+      setColors([...colors, { color: '', image: null }]);
+    }
+  };
+
+  // Update color or image in the colors array
+  const handleColorChange = (index, field, value) => {
+    const updatedColors = [...colors];
+    updatedColors[index][field] = value;
+    setColors(updatedColors);
+  };
+
+  // Remove a color
+  const handleRemoveColor = (index) => {
+    setColors(colors.filter((_, i) => i !== index));
+  };
+
+  // Handle new category creation
+  const handleCreateCategory = async () => {
+    if (newCategory.trim()) {
+      try {
+        const response = await fetch('http://localhost/schizotactical/backend/create_category.php', {
+          method: 'POST',
+          body: JSON.stringify({ name: newCategory }),
+          headers: { 'Content-Type': 'application/json' },
+        });
+        const data = await response.json();
+        if (data.success) {
+          setCategories([...categories, data.category]);
+          setNewCategory('');
+        } else {
+          throw new Error(data.message);
+        }
+      } catch (err) {
+        console.error('Error creating category:', err);
+      }
+    }
+  };
+
+  // Handle new subcategory creation
+  const handleCreateSubcategory = async () => {
+    if (newSubcategory.trim() && formData.main_category) {
+        try {
+            console.log('Enviando datos al backend:', {
+                name: newSubcategory,
+                parent_id: formData.main_category,
+            });
+
+            const response = await fetch('http://localhost/schizotactical/backend/create_subcategory.php', {
+                method: 'POST',
+                body: JSON.stringify({
+                    name: newSubcategory,
+                    parent_id: formData.main_category, // ID de la categoría principal
+                }),
+                headers: { 'Content-Type': 'application/json' },
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                setSubcategories([...subcategories, data.subcategory]);
+                setNewSubcategory('');
+            } else {
+                throw new Error(data.message);
+            }
+        } catch (err) {
+            console.error('Error creating subcategory:', err);
+            alert(err.message);
+        }
+    } else {
+        alert('Por favor, ingresa un nombre para la subcategoría y selecciona una categoría principal.');
+    }
+};
+
+  // Handle category deletion
+  const handleDeleteCategory = async (categoryId) => {
+    if (window.confirm('¿Estás seguro de que deseas eliminar esta categoría? Esto también eliminará sus subcategorías.')) {
+      try {
+        const response = await fetch(`http://localhost/schizotactical/backend/delete_category.php`, {
+          method: 'POST',
+          body: JSON.stringify({ category_id: categoryId }),
+          headers: { 'Content-Type': 'application/json' },
+        });
+        const data = await response.json();
+        if (data.success) {
+          setCategories(categories.filter((category) => category.id !== categoryId));
+          setSubcategories([]); // Clear subcategories if the selected category is deleted
+        } else {
+          throw new Error(data.message);
+        }
+      } catch (err) {
+        console.error('Error deleting category:', err);
+      }
+    }
+  };
+
+  // Handle subcategory deletion
+  const handleDeleteSubcategory = async (subcategoryId) => {
+    if (window.confirm('¿Estás seguro de que deseas eliminar esta subcategoría?')) {
+      try {
+        const response = await fetch(`http://localhost/schizotactical/backend/delete_subcategory.php`, {
+          method: 'POST',
+          body: JSON.stringify({ subcategory_id: subcategoryId }),
+          headers: { 'Content-Type': 'application/json' },
+        });
+        const data = await response.json();
+        if (data.success) {
+          setSubcategories(subcategories.filter((subcategory) => subcategory.id !== subcategoryId));
+        } else {
+          throw new Error(data.message);
+        }
+      } catch (err) {
+        console.error('Error deleting subcategory:', err);
+      }
     }
   };
 
@@ -208,34 +333,104 @@ function AgregarProducto() {
         {/* Categoría Principal */}
         <div className="form-group">
           <label htmlFor="main_category" className="form-label">Categoría Principal</label>
-          <select id="main_category" name="main_category" className="form-select" value={formData.main_category} onChange={handleChange} required>
-            <option value="">Seleccione una categoría</option>
-            {categories.map(category => (
-              <option key={category.id} value={category.id}>{category.name}</option>
+          <div className="category-container">
+            {categories.map((category) => (
+              <div
+                key={category.id}
+                className="category-item"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  marginBottom: '0.5rem',
+                  backgroundColor: formData.main_category === category.id ? '#e0f7fa' : '#ffffff', // Fondo azul claro si está seleccionada
+                  color: '#000', // Texto negro
+                  padding: '0.5rem',
+                  borderRadius: '4px',
+                  border: '1px solid #ccc',
+                  cursor: 'pointer',
+                }}
+                onClick={() => setFormData({ ...formData, main_category: category.id, subcategory: '' })}
+              >
+                <span style={{ flex: 1 }}>{category.name}</span>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation(); // Evita que se seleccione la categoría al hacer clic en la "X"
+                    handleDeleteCategory(category.id);
+                  }}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    color: 'red',
+                    cursor: 'pointer',
+                  }}
+                  title={`Eliminar ${category.name}`}
+                >
+                  ✖
+                </button>
+              </div>
             ))}
-            {/* Se elimina la opción "+ Crear Nueva Categoría" */}
-          </select>
-          {/* Se elimina el input para nueva categoría */}
+          </div>
+          <input
+            type="text"
+            placeholder="Nueva Categoría"
+            value={newCategory}
+            onChange={(e) => setNewCategory(e.target.value)}
+            style={{ marginTop: '0.5rem' }}
+          />
+          <button type="button" onClick={handleCreateCategory} style={{ marginTop: '0.5rem' }}>Crear</button>
         </div>
 
         {/* Subcategoría */}
         <div className="form-group">
-          <label htmlFor="subcategory" className="form-label">Subcategoría (opcional)</label>
-          <select
-             id="subcategory"
-             name="subcategory"
-             className="form-select"
-             value={formData.subcategory}
-             onChange={handleChange}
-             disabled={!formData.main_category} // Deshabilitado si no hay categoría principal
-             // Se elimina 'required' ya que es opcional
-          >
-            <option value="">{formData.main_category ? (subcategories.length > 0 ? 'Seleccione subcategoría' : 'Sin subcategorías') : 'Seleccione categoría primero'}</option>
-            {subcategories.map(subcategory => (
-              <option key={subcategory.id} value={subcategory.id}>{subcategory.name}</option>
+          <label htmlFor="subcategory" className="form-label">Subcategoría</label>
+          <div className="subcategory-container">
+            {subcategories.map((subcategory) => (
+              <div
+                key={subcategory.id}
+                className="subcategory-item"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  marginBottom: '0.5rem',
+                  backgroundColor: formData.subcategory === subcategory.id ? '#e0f7fa' : '#ffffff', // Fondo azul claro si está seleccionada
+                  color: '#000', // Texto negro
+                  padding: '0.5rem',
+                  borderRadius: '4px',
+                  border: '1px solid #ccc',
+                  cursor: 'pointer',
+                }}
+                onClick={() => setFormData({ ...formData, subcategory: subcategory.id })}
+              >
+                <span style={{ flex: 1 }}>{subcategory.name}</span>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation(); // Evita que se seleccione la subcategoría al hacer clic en la "X"
+                    handleDeleteSubcategory(subcategory.id);
+                  }}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    color: 'red',
+                    cursor: 'pointer',
+                  }}
+                  title={`Eliminar ${subcategory.name}`}
+                >
+                  ✖
+                </button>
+              </div>
             ))}
-          </select>
-           {/* Se elimina el input para nueva subcategoría */}
+          </div>
+          <input
+            type="text"
+            placeholder="Nueva Subcategoría"
+            value={newSubcategory}
+            onChange={(e) => setNewSubcategory(e.target.value)}
+            disabled={!formData.main_category}
+            style={{ marginTop: '0.5rem' }}
+          />
+          <button type="button" onClick={handleCreateSubcategory} disabled={!formData.main_category} style={{ marginTop: '0.5rem' }}>Crear</button>
         </div>
 
         {/* Opciones de Stock */}
@@ -308,6 +503,79 @@ function AgregarProducto() {
             onChange={handleFileChange}
             accept="image/*"
           />
+        </div>
+
+        {/* Description */}
+        <div className="form-group">
+          <label htmlFor="descripcion" className="form-label">Descripción</label>
+          <textarea id="descripcion" name="descripcion" className="form-control" value={formData.descripcion} onChange={handleChange} required />
+        </div>
+
+        {/* Design */}
+        <div className="form-group">
+          <label htmlFor="diseno" className="form-label">Diseño</label>
+          <textarea id="diseno" name="diseno" className="form-control" value={formData.diseno} onChange={handleChange} />
+        </div>
+
+        {/* Materials */}
+        <div className="form-group">
+          <label htmlFor="materiales" className="form-label">Materiales</label>
+          <textarea id="materiales" name="materiales" className="form-control" value={formData.materiales} onChange={handleChange} />
+        </div>
+
+        {/* Includes */}
+        <div className="form-group">
+          <label htmlFor="incluye" className="form-label">Incluye</label>
+          <textarea id="incluye" name="incluye" className="form-control" value={formData.incluye} onChange={handleChange} />
+        </div>
+
+        {/* Colors */}
+        <div className="form-group">
+          <label className="form-label">Colores</label>
+          {colors.map((color, index) => (
+            <div key={index} className="color-group" style={{ display: 'flex', alignItems: 'center', marginBottom: '1rem' }}>
+              {/* Circular color preview */}
+              <div
+                style={{
+                  width: '30px',
+                  height: '30px',
+                  borderRadius: '50%',
+                  backgroundColor: color.color || '#ffffff',
+                  border: '1px solid #ccc',
+                  cursor: 'pointer',
+                  marginRight: '1rem',
+                }}
+                onClick={() => document.getElementById(`color-picker-${index}`).click()} // Trigger color picker on click
+              ></div>
+
+              {/* Hidden color picker */}
+              <input
+                type="color"
+                id={`color-picker-${index}`}
+                value={color.color}
+                style={{ display: 'none' }}
+                onChange={(e) => handleColorChange(index, 'color', e.target.value)}
+              />
+
+              {/* Image upload for the color */}
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => handleColorChange(index, 'image', e.target.files[0])}
+                style={{ marginRight: '1rem' }}
+              />
+
+              {/* Remove color button */}
+              <button type="button" onClick={() => handleRemoveColor(index)} className="btn btn-danger">
+                Eliminar
+              </button>
+            </div>
+          ))}
+          {colors.length < 8 && (
+            <button type="button" onClick={handleAddColor} className="btn btn-primary">
+              Agregar Color
+            </button>
+          )}
         </div>
 
         {/* Botones de Acción */}

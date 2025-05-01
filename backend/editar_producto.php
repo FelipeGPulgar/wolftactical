@@ -11,19 +11,16 @@ ini_set('log_errors', 1); // Asegúrate de que los errores se registren
 session_start();
 
 // --- Configuración CORS ---
-$allowed_origins = ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002', 'http://localhost:3003'];
-$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
-if (in_array($origin, $allowed_origins)) {
-    header("Access-Control-Allow-Origin: $origin");
-    header("Vary: Origin"); // Importante para caché
-} else {
-    header("Access-Control-Allow-Origin: http://localhost:3000"); // Valor predeterminado seguro
+if (isset($_SERVER['HTTP_ORIGIN'])) {
+    $allowed_origins = ['http://localhost:3000', 'http://localhost:3003', 'http://localhost:3004'];
+    if (in_array($_SERVER['HTTP_ORIGIN'], $allowed_origins)) {
+        header("Access-Control-Allow-Origin: " . $_SERVER['HTTP_ORIGIN']);
+        header("Access-Control-Allow-Credentials: true"); // Permitir credenciales
+    }
 }
 header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type, Authorization");
-header("Access-Control-Allow-Credentials: true");
 
-// --- Manejo OPTIONS ---
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     exit();

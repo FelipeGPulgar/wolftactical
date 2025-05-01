@@ -1,17 +1,18 @@
 <?php
-// Habilitar CORS dinámico para coincidir con el origen de la solicitud
-$allowed_origins = ['http://localhost:3000', 'http://localhost:3001'];
-if (isset($_SERVER['HTTP_ORIGIN']) && in_array($_SERVER['HTTP_ORIGIN'], $allowed_origins)) {
-    header("Access-Control-Allow-Origin: {$_SERVER['HTTP_ORIGIN']}");
+// Configuración dinámica de CORS
+if (isset($_SERVER['HTTP_ORIGIN'])) {
+    $allowed_origins = ['http://localhost:3000', 'http://localhost:3003', 'http://localhost:3004'];
+    if (in_array($_SERVER['HTTP_ORIGIN'], $allowed_origins)) {
+        header("Access-Control-Allow-Origin: " . $_SERVER['HTTP_ORIGIN']);
+        header("Access-Control-Allow-Credentials: true"); // Permitir credenciales
+    }
 }
 header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type, Authorization");
-header("Access-Control-Allow-Credentials: true");
 
-// Manejo de errores para solicitudes OPTIONS
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
-    exit;
+    exit();
 }
 
 require_once 'db.php';

@@ -7,19 +7,16 @@ ini_set('display_errors', 1);
 session_start(); // Iniciar sesión para verificar autenticación
 
 // --- Configuración CORS Dinámica ---
-$allowed_origins = ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002', 'http://localhost:3003']; // Añade todos tus orígenes permitidos
-$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
-if (in_array($origin, $allowed_origins)) {
-    header("Access-Control-Allow-Origin: $origin");
-} else {
-    // Considera un origen predeterminado seguro o bloquear
-    header("Access-Control-Allow-Origin: http://localhost:3000");
+if (isset($_SERVER['HTTP_ORIGIN'])) {
+    $allowed_origins = ['http://localhost:3000', 'http://localhost:3003', 'http://localhost:3004'];
+    if (in_array($_SERVER['HTTP_ORIGIN'], $allowed_origins)) {
+        header("Access-Control-Allow-Origin: " . $_SERVER['HTTP_ORIGIN']);
+        header("Access-Control-Allow-Credentials: true");
+    }
 }
 header("Access-Control-Allow-Methods: POST, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type, Authorization"); // Permitir Authorization si es necesario
-header("Access-Control-Allow-Credentials: true"); // Necesario si React envía 'include'
+header("Access-Control-Allow-Headers: Content-Type, Authorization");
 
-// --- Manejo OPTIONS (Preflight) ---
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     exit();
@@ -63,6 +60,12 @@ $price_input = $_POST['price'] ?? null;
 // El form JS actual no tiene un input para is_active, así que siempre será 1.
 $is_active = isset($_POST['is_active']) ? (int)$_POST['is_active'] : 1;
 
+// Handle new fields
+$descripcion = $_POST['descripcion'] ?? null;
+$diseno = $_POST['diseno'] ?? null;
+$materiales = $_POST['materiales'] ?? null;
+$incluye = $_POST['incluye'] ?? null;
+$tiene_colores = isset($_POST['colors']) ? 1 : 0;
 
 // Validaciones
 // Check if filter_input returned false (invalid int) or null (not set) for category_id
@@ -148,8 +151,8 @@ try {
 
     // Insertar producto principal
     // Ensure column names match your DB schema exactly
-    $sqlInsertProduct = "INSERT INTO products (name, model, category_id, subcategory_id, stock_option, stock_quantity, price, main_image, is_active, created_at, updated_at)
-                         VALUES (:name, :model, :category_id, :subcategory_id, :stock_option, :stock_quantity, :price, :main_image, :is_active, NOW(), NOW())";
+    $sqlInsertProduct = "INSERT INTO products (name, model, category_id, subcategory_id, stock_option, stock_quantity, price, descripcion, diseno, materiales, incluye, tiene_colores, main_image, is_active, created_at, updated_at)
+                         VALUES (:name, :model, :category_id, :subcategory_id, :stock_option, :stock_quantity, :price, :descripcion, :diseno, :materiales, :incluye, :tiene_colores, :main_image, :is_active, NOW(), NOW())";
     $stmtProduct = $pdo->prepare($sqlInsertProduct);
     $paramsProduct = [
         ':name' => $name,
@@ -160,6 +163,11 @@ try {
         ':stock_option' => $stock_option,
         ':stock_quantity' => $stock_quantity, // Will be NULL if stock_option is not 'instock'
         ':price' => $price,
+        ':descripcion' => $descripcion,
+        ':diseno' => $diseno,
+        ':materiales' => $materiales,
+        ':incluye' => $incluye,
+        ':tiene_colores' => $tiene_colores,
         ':main_image' => $main_image_relative_path, // Relative path stored
         ':is_active' => $is_active // Usar el valor determinado antes
     ];
@@ -205,6 +213,21 @@ try {
         } elseif ($imageFile && $imageFile['error'] !== UPLOAD_ERR_NO_FILE) {
              // Log other upload errors for additional images
              error_log("Error en subida de imagen adicional {$index} (código: {$imageFile['error']}) para producto ID $newProductId");
+        }
+    }
+
+    // Handle colors
+    if ($tiene_colores && isset($_FILES['colors'])) {
+        foreach ($_FILES['colors']['name'] as $index => $color_name) {
+            $color_hex = $_POST['colors'][$index]['color'];
+            $color_image = $_FILES['colors']['tmp_name'][$index];
+            $image_path = "uploads/color_{$newProductId}_{$index}_" . uniqid() . ".jpeg";
+            move_uploaded_file($color_image, $image_path);
+
+            $query = "INSERT INTO product_images (product_id, tipo, color_nombre, image_url, image_order) VALUES (?, 'color', ?, ?, ?)";
+            $stmt = $conn->prepare($query);
+            $stmt->bind_param("issi", $newProductId, $color_hex, $image_path, $index + 1);
+            $stmt->execute();
         }
     }
 

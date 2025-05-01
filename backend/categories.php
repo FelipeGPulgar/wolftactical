@@ -1,23 +1,21 @@
 <?php
-// Update the CORS configuration to dynamically allow the origin of the incoming request
-$allowed_origins = ['http://localhost:3000', 'http://localhost:3001'];
-if (isset($_SERVER['HTTP_ORIGIN']) && in_array($_SERVER['HTTP_ORIGIN'], $allowed_origins)) {
-    header("Access-Control-Allow-Origin: {$_SERVER['HTTP_ORIGIN']}");
-} else {
-    header("Access-Control-Allow-Origin: null"); // Default to null if the origin is not allowed
+// Dynamically set the Access-Control-Allow-Origin header
+if (isset($_SERVER['HTTP_ORIGIN'])) {
+    $allowed_origins = ['http://localhost:3000', 'http://localhost:3003', 'http://localhost:3004'];
+    if (in_array($_SERVER['HTTP_ORIGIN'], $allowed_origins)) {
+        header("Access-Control-Allow-Origin: " . $_SERVER['HTTP_ORIGIN']);
+    }
 }
 header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type, Authorization");
-header("Access-Control-Allow-Credentials: true");
+
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
+    exit();
+}
 
 header('Content-Type: application/json');
 require_once 'db.php';
-
-// Handle preflight OPTIONS request
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(200);
-    exit;
-}
 
 try {
     $query = "SELECT c1.id, c1.name, c2.id AS sub_id, c2.name AS sub_name

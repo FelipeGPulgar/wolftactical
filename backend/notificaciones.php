@@ -14,25 +14,19 @@ ini_set('log_errors', 1); // Log errors even if not displayed
 session_start();
 
 // --- Configuración CORS Dinámica ---
-$allowed_origins = ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002', 'http://localhost:3003']; // Add your frontend origins
-$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
-
-if (in_array($origin, $allowed_origins)) {
-    header("Access-Control-Allow-Origin: $origin");
-    header("Vary: Origin"); // Important for caching
-} else {
-    // Default or block disallowed origins
-    header("Access-Control-Allow-Origin: http://localhost:3000"); // Fallback for safety
+if (isset($_SERVER['HTTP_ORIGIN'])) {
+    $allowed_origins = ['http://localhost:3000', 'http://localhost:3003', 'http://localhost:3004'];
+    if (in_array($_SERVER['HTTP_ORIGIN'], $allowed_origins)) {
+        header("Access-Control-Allow-Origin: " . $_SERVER['HTTP_ORIGIN']);
+    }
 }
-
-header("Access-Control-Allow-Methods: GET, OPTIONS"); // Only GET needed here
-header("Access-Control-Allow-Headers: Content-Type, Authorization"); // Keep Authorization if used elsewhere
+header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
+header("Access-Control-Allow-Headers: Content-Type, Authorization");
 header("Access-Control-Allow-Credentials: true"); // Crucial for 'include' credentials
 
 // --- Manejo OPTIONS (Preflight) ---
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
-    // header("Access-Control-Max-Age: 86400"); // Optional: Cache preflight
     exit(); // Stop script execution for OPTIONS
 }
 
