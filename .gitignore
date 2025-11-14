@@ -23,7 +23,5 @@ yarn-debug.log*
 yarn-error.log*
 
 # backend uploads (images and files)
-/backend/uploads/
-!backend/uploads/
-!backend/uploads/security/
-!backend/uploads/security/*
+/backend/uploads/*
+!/backend/uploads/security/**
