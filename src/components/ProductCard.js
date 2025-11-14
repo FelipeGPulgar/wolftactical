@@ -2,27 +2,20 @@
 import React from 'react';
 import { Link } from 'react-router-dom'; // Importa Link para enlazar al detalle
 import './ProductCard.css'; // Importa el archivo CSS
+import { formatCLP } from '../utils/formatters';
 
 function ProductCard({ product }) {
-  // 1. Construir la URL completa de la imagen
-  // src/components/ProductCard.js - AJUSTE POTENCIAL
-// SOLO SI product.main_image YA CONTIENE 'uploads/'
-const imageUrl = product?.main_image
-  ? `http://localhost/schizotactical/backend/${product.main_image}` // SIN 'uploads/' extra
-  : '/images/placeholder.png';
+  // Determinar campo de imagen de portada disponible: preferir cover_image, luego main_image
+  const coverPath = product?.cover_image || product?.main_image || null;
+  const imageUrl = coverPath
+    ? `http://localhost/schizotactical/backend/${coverPath}`
+    : '/images/placeholder.png';
 
 
  // Ruta a una imagen por defecto en tu carpeta 'public/images'
 
   // 2. Función para formatear el precio (ejemplo para CLP)
-  const formatPrice = (price) => {
-    // Verifica si el precio es un número válido
-    const numericPrice = Number(price);
-    if (!isNaN(numericPrice)) {
-      return `$${numericPrice.toLocaleString('es-CL')}`; // Formato chileno
-    }
-    return '$?'; // O un placeholder si el precio no es válido
-  };
+  const formatPrice = (price) => formatCLP(price);
 
   // 3. Manejo de error para la imagen
   // Dentro de ProductCard.js

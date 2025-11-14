@@ -33,8 +33,8 @@ function Admin() {
       <Routes>
         <Route index element={<ProductosAdmin />} />
         <Route path="productos" element={<ProductosAdmin />} />
-        <Route path="agregar-producto" element={<AgregarProducto />} />
-        <Route path="editar-producto/:id" element={<EditarProducto />} />
+  <Route path="agregar-producto" element={<AgregarProducto />} />
+  <Route path="editar-producto/:id" element={<EditarProducto />} />
       </Routes>
     </AdminLayout>
   );

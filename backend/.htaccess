@@ -1,3 +1,16 @@
 <IfModule mod_rewrite.c>
-    RewriteEngine On
+        RewriteEngine On
 </IfModule>
+
+# Security hardening: block direct access to json/log/ini/bak data stores
+<FilesMatch "\.(json|log|ini|bak)$">
+    Require all denied
+</FilesMatch>
+<IfModule !mod_authz_core.c>
+    <FilesMatch "\.(json|log|ini|bak)$">
+        Order allow,deny
+        Deny from all
+    </FilesMatch>
+</IfModule>
+
+Options -Indexes

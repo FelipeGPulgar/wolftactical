@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { formatCLP, parseCLPInput } from '../../utils/formatters';
 // Asegúrate de tener estilos adecuados, puedes importar los de EditarProducto si son similares
 // import './AgregarProducto.css'; // O crea uno específico
 
@@ -9,28 +10,26 @@ function AgregarProducto() {
     name: '',
     model: '',
     main_category: '',
-    subcategory: '',
-    stock_option: 'preorder', // Valor inicial por defecto
+    stock_option: 'preorder',
     stock_quantity: '',
     price: '',
-    main_image: null, // Para el archivo de imagen principal
-    image_1: null,    // Para el archivo de imagen adicional 1
-    image_2: null,    // Para el archivo de imagen adicional 2
+    main_image: null,
+    image_1: null,
+    image_2: null,
     descripcion: '',
-    diseno: '',
-    materiales: '',
-    incluye: ''
-    // Se eliminan new_category_name y new_subcategory_name ya que el backend no parece manejarlos
+    incluye: '',
+    video_url: ''
   });
 
   const [categories, setCategories] = useState([]);
-  const [subcategories, setSubcategories] = useState([]);
+  // Subcategorías deshabilitadas
   const [imagePreview, setImagePreview] = useState(null); // Vista previa solo para imagen principal
+  const [additionalImages, setAdditionalImages] = useState([]); // Galería de imágenes adicionales
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null); // Para mostrar errores en la UI
   const [colors, setColors] = useState([]); // Array to manage colors
   const [newCategory, setNewCategory] = useState(''); // For creating new categories
-  const [newSubcategory, setNewSubcategory] = useState(''); // For creating new subcategories
+  // const [newSubcategory, setNewSubcategory] = useState(''); // Eliminado: subcategorías deshabilitadas
 
   // --- Efecto para Cargar Categorías Iniciales ---
   useEffect(() => {
@@ -58,48 +57,29 @@ function AgregarProducto() {
     fetchCategories();
   }, []); // Se ejecuta solo una vez al montar el componente
 
-  // --- Efecto para Cargar Subcategorías (cuando cambia la categoría principal) ---
-  useEffect(() => {
-    // Solo cargar si hay una categoría principal seleccionada (y no es la opción "nueva")
-    if (formData.main_category) {
-      const fetchSubcategories = async () => {
-        // Limpiar subcategorías anteriores mientras se cargan las nuevas
-        setSubcategories([]);
-        try {
-          const response = await fetch(`http://localhost/schizotactical/backend/get_subcategories.php?category_id=${formData.main_category}`);
-           if (!response.ok) {
-              throw new Error(`Error HTTP al cargar subcategorías: ${response.status}`);
-           }
-          const data = await response.json();
-          // Validar que la respuesta sea un array
-          if (Array.isArray(data)) {
-             setSubcategories(data);
-          } else {
-             console.warn("Respuesta inesperada para subcategorías, se esperaba un array:", data);
-             setSubcategories([]);
-          }
-        } catch (err) {
-          console.error('Error al cargar subcategorías:', err);
-          // No establecer error global, podría ser normal no tener subcategorías
-          setSubcategories([]);
-        }
-      };
-      fetchSubcategories();
-    } else {
-      // Limpiar subcategorías si no hay categoría principal seleccionada
-      setSubcategories([]);
-    }
-  }, [formData.main_category]); // Dependencia: se re-ejecuta si cambia la categoría principal
+  // Subcategorías deshabilitadas: no cargar nada
 
   // --- Manejador de Cambios en Inputs y Selects ---
   const handleChange = (e) => {
     const { name, value } = e.target;
+    if (name === 'price') {
+      handlePriceInputChange(value);
+      return;
+    }
     setFormData(prev => ({
       ...prev,
-      [name]: value,
-      // Resetear subcategoría si cambia la categoría principal
-      ...(name === 'main_category' ? { subcategory: '' } : {})
+      [name]: value
     }));
+  };
+
+  const handlePriceInputChange = (rawValue) => {
+    // Permitir vacío
+    if (rawValue.trim() === '') {
+      setFormData(prev => ({ ...prev, price: '' }));
+      return;
+    }
+    const numeric = parseCLPInput(rawValue);
+    setFormData(prev => ({ ...prev, price: numeric }));
   };
 
   // --- Manejador de Cambio de Archivos (Imágenes) ---
@@ -121,6 +101,12 @@ function AgregarProducto() {
     } else if (name === 'main_image' && !file) {
       setImagePreview(null); // Limpia la vista previa si se cancela la selección
     }
+  };
+
+  // --- Manejador para imágenes adicionales (múltiples) ---
+  const handleAdditionalImagesChange = (e) => {
+    const files = Array.from(e.target.files || []);
+    setAdditionalImages(files);
   };
 
   // Add a new color
@@ -164,43 +150,9 @@ function AgregarProducto() {
     }
   };
 
-  // Handle new subcategory creation
-  const handleCreateSubcategory = async () => {
-    if (newSubcategory.trim() && formData.main_category) {
-        try {
-            console.log('Enviando datos al backend:', {
-                name: newSubcategory,
-                parent_id: formData.main_category,
-            });
-
-            const response = await fetch('http://localhost/schizotactical/backend/create_subcategory.php', {
-                method: 'POST',
-                body: JSON.stringify({
-                    name: newSubcategory,
-                    parent_id: formData.main_category, // ID de la categoría principal
-                }),
-                headers: { 'Content-Type': 'application/json' },
-            });
-
-            const data = await response.json();
-            if (data.success) {
-                setSubcategories([...subcategories, data.subcategory]);
-                setNewSubcategory('');
-            } else {
-                throw new Error(data.message);
-            }
-        } catch (err) {
-            console.error('Error creating subcategory:', err);
-            alert(err.message);
-        }
-    } else {
-        alert('Por favor, ingresa un nombre para la subcategoría y selecciona una categoría principal.');
-    }
-};
-
   // Handle category deletion
   const handleDeleteCategory = async (categoryId) => {
-    if (window.confirm('¿Estás seguro de que deseas eliminar esta categoría? Esto también eliminará sus subcategorías.')) {
+    if (window.confirm('¿Estás seguro de que deseas eliminar esta categoría?')) {
       try {
         const response = await fetch(`http://localhost/schizotactical/backend/delete_category.php`, {
           method: 'POST',
@@ -210,7 +162,6 @@ function AgregarProducto() {
         const data = await response.json();
         if (data.success) {
           setCategories(categories.filter((category) => category.id !== categoryId));
-          setSubcategories([]); // Clear subcategories if the selected category is deleted
         } else {
           throw new Error(data.message);
         }
@@ -220,26 +171,7 @@ function AgregarProducto() {
     }
   };
 
-  // Handle subcategory deletion
-  const handleDeleteSubcategory = async (subcategoryId) => {
-    if (window.confirm('¿Estás seguro de que deseas eliminar esta subcategoría?')) {
-      try {
-        const response = await fetch(`http://localhost/schizotactical/backend/delete_subcategory.php`, {
-          method: 'POST',
-          body: JSON.stringify({ subcategory_id: subcategoryId }),
-          headers: { 'Content-Type': 'application/json' },
-        });
-        const data = await response.json();
-        if (data.success) {
-          setSubcategories(subcategories.filter((subcategory) => subcategory.id !== subcategoryId));
-        } else {
-          throw new Error(data.message);
-        }
-      } catch (err) {
-        console.error('Error deleting subcategory:', err);
-      }
-    }
-  };
+  // Subcategorías deshabilitadas: sin manejo
 
   // --- Manejador de Envío del Formulario ---
   const handleSubmit = async (e) => {
@@ -256,6 +188,13 @@ function AgregarProducto() {
         formDataToSend.append(key, value);
       }
     });
+
+    // Adjuntar imágenes adicionales (si las hay)
+    if (additionalImages.length > 0) {
+      additionalImages.forEach((file) => {
+        if (file) formDataToSend.append('additional_images[]', file);
+      });
+    }
 
     // Log para depuración (opcional)
     // console.log("Enviando FormData:");
@@ -381,57 +320,7 @@ function AgregarProducto() {
           <button type="button" onClick={handleCreateCategory} style={{ marginTop: '0.5rem' }}>Crear</button>
         </div>
 
-        {/* Subcategoría */}
-        <div className="form-group">
-          <label htmlFor="subcategory" className="form-label">Subcategoría</label>
-          <div className="subcategory-container">
-            {subcategories.map((subcategory) => (
-              <div
-                key={subcategory.id}
-                className="subcategory-item"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  marginBottom: '0.5rem',
-                  backgroundColor: formData.subcategory === subcategory.id ? '#e0f7fa' : '#ffffff', // Fondo azul claro si está seleccionada
-                  color: '#000', // Texto negro
-                  padding: '0.5rem',
-                  borderRadius: '4px',
-                  border: '1px solid #ccc',
-                  cursor: 'pointer',
-                }}
-                onClick={() => setFormData({ ...formData, subcategory: subcategory.id })}
-              >
-                <span style={{ flex: 1 }}>{subcategory.name}</span>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation(); // Evita que se seleccione la subcategoría al hacer clic en la "X"
-                    handleDeleteSubcategory(subcategory.id);
-                  }}
-                  style={{
-                    background: 'transparent',
-                    border: 'none',
-                    color: 'red',
-                    cursor: 'pointer',
-                  }}
-                  title={`Eliminar ${subcategory.name}`}
-                >
-                  ✖
-                </button>
-              </div>
-            ))}
-          </div>
-          <input
-            type="text"
-            placeholder="Nueva Subcategoría"
-            value={newSubcategory}
-            onChange={(e) => setNewSubcategory(e.target.value)}
-            disabled={!formData.main_category}
-            style={{ marginTop: '0.5rem' }}
-          />
-          <button type="button" onClick={handleCreateSubcategory} disabled={!formData.main_category} style={{ marginTop: '0.5rem' }}>Crear</button>
-        </div>
+        {/* Subcategorías deshabilitadas */}
 
         {/* Opciones de Stock */}
         <div className="form-group">
@@ -456,10 +345,21 @@ function AgregarProducto() {
           )}
         </div>
 
-        {/* Precio */}
+        {/* Precio con formateo en vivo */}
         <div className="form-group">
           <label htmlFor="price" className="form-label">Precio (CLP)</label>
-          <input type="number" id="price" name="price" className="form-control" value={formData.price} onChange={handleChange} min="0" step="any" required />
+          <input
+            type="text"
+            id="price"
+            name="price"
+            className="form-control"
+            value={formData.price === '' ? '' : formatCLP(formData.price)}
+            onChange={(e) => handleChange(e)}
+            required
+            placeholder="$0"
+            inputMode="numeric"
+            autoComplete="off"
+          />
         </div>
 
         {/* Imagen Principal */}
@@ -505,28 +405,40 @@ function AgregarProducto() {
           />
         </div>
 
+        {/* Galería de Imágenes (múltiples) */}
+        <div className="form-group">
+          <label htmlFor="additional_images" className="form-label">Galería (puedes seleccionar varias imágenes)</label>
+          <input
+            type="file"
+            id="additional_images"
+            name="additional_images"
+            className="form-control"
+            onChange={handleAdditionalImagesChange}
+            accept="image/*"
+            multiple
+          />
+          <small>Se permite subir varias imágenes (hasta 20 en total por producto).</small>
+        </div>
+
         {/* Description */}
         <div className="form-group">
           <label htmlFor="descripcion" className="form-label">Descripción</label>
           <textarea id="descripcion" name="descripcion" className="form-control" value={formData.descripcion} onChange={handleChange} required />
         </div>
 
-        {/* Design */}
-        <div className="form-group">
-          <label htmlFor="diseno" className="form-label">Diseño</label>
-          <textarea id="diseno" name="diseno" className="form-control" value={formData.diseno} onChange={handleChange} />
-        </div>
-
-        {/* Materials */}
-        <div className="form-group">
-          <label htmlFor="materiales" className="form-label">Materiales</label>
-          <textarea id="materiales" name="materiales" className="form-control" value={formData.materiales} onChange={handleChange} />
-        </div>
+        {/* Diseño/Materiales eliminados: no existen en la base de datos */}
 
         {/* Includes */}
         <div className="form-group">
           <label htmlFor="incluye" className="form-label">Incluye</label>
           <textarea id="incluye" name="incluye" className="form-control" value={formData.incluye} onChange={handleChange} />
+        </div>
+
+        {/* Video URL */}
+        <div className="form-group">
+          <label htmlFor="video_url" className="form-label">Video URL (opcional)</label>
+          <input type="url" id="video_url" name="video_url" className="form-control" placeholder="https://..." value={formData.video_url} onChange={handleChange} />
+          <small>Ejemplo: enlace de YouTube o video alojado.</small>
         </div>
 
         {/* Colors */}

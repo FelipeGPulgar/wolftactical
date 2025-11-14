@@ -7,6 +7,7 @@ function Login() {
     const [password, setPassword] = useState('');
     const [message, setMessage] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [isBlocked, setIsBlocked] = useState(false);
     const navigate = useNavigate();
 
     const handleSubmit = async (e) => {
@@ -33,6 +34,9 @@ function Login() {
                     errorMsg = errorData.message || errorMsg;
                 } catch (jsonError) {
                     // No se pudo parsear JSON, usar mensaje HTTP
+                }
+                if (response.status === 403) {
+                    setIsBlocked(true);
                 }
                 throw new Error(errorMsg);
             }
@@ -73,6 +77,7 @@ function Login() {
                             onChange={(e) => setUsername(e.target.value)}
                             placeholder="Nombre de usuario" // Placeholder como alternativa a label
                             required
+                            disabled={isBlocked}
                             autoFocus
                         />
                     </div>
@@ -85,6 +90,7 @@ function Login() {
                             onChange={(e) => setPassword(e.target.value)}
                             placeholder="Contraseña" // Placeholder
                             required
+                            disabled={isBlocked}
                         />
                     </div>
                     {/* Mensaje de error/éxito */}
@@ -94,8 +100,8 @@ function Login() {
                             {message}
                         </div>
                     )}
-                    <button type="submit" className="btn-login" disabled={isLoading}>
-                        {isLoading ? 'Verificando...' : 'Ingresar'}
+                    <button type="submit" className="btn-login" disabled={isLoading || isBlocked}>
+                        {isBlocked ? 'Acceso denegado' : (isLoading ? 'Verificando...' : 'Ingresar')}
                     </button>
 
                     {/* Botón para volver a la tienda */}

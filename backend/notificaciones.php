@@ -37,6 +37,20 @@ header("Content-Type: application/json");
 // --- Conexión DB y Autenticación ---
 require_once 'db.php'; // Ensure this defines your $pdo connection
 
+// Asegurar tabla de notificaciones (evitar 500 si no existe)
+try {
+    $pdo->exec("CREATE TABLE IF NOT EXISTS notifications (
+        id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        message VARCHAR(500) NOT NULL,
+        type VARCHAR(50) NOT NULL DEFAULT 'info',
+        duration INT UNSIGNED NULL,
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+} catch (Throwable $e) {
+    // No bloquear por esto, sólo registrar
+    error_log('[notifications bootstrap] ' . $e->getMessage());
+}
+
 // Verifica la sesión de administrador
 if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true) {
     http_response_code(401); // Unauthorized

@@ -9,6 +9,7 @@ if (isset($_SERVER['HTTP_ORIGIN'])) {
 }
 header("Access-Control-Allow-Methods: POST, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type, Authorization");
+header("Content-Type: application/json");
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
@@ -22,7 +23,7 @@ require_once 'db.php';
 $data = json_decode(file_get_contents("php://input"), true);
 error_log("Datos recibidos en create_subcategory.php: " . json_encode($data));
 
-if (!isset($data['name']) || !isset($data['parent_id'])) { // Validar parent_id
+if (!isset($data['name']) || !isset($data['parent_id'])) { // Validar parent_id (desde frontend)
     error_log("Error: Faltan datos para crear la subcategoría.");
     error_log("Datos recibidos: " . json_encode($data)); // Depuración adicional
     http_response_code(400); // Bad Request
@@ -31,12 +32,12 @@ if (!isset($data['name']) || !isset($data['parent_id'])) { // Validar parent_id
 }
 
 $name = trim($data['name']);
-$parent_id = intval($data['parent_id']);
-error_log("Nombre de la subcategoría recibido: " . $name . ", Parent ID: " . $parent_id);
+$parent_id = intval($data['parent_id']); // Corresponde a category_id en nuevo esquema
+error_log("Nombre de la subcategoría recibido: " . $name . ", Parent ID (category_id): " . $parent_id);
 
 try {
-    // Verificar si la categoría principal existe
-    $stmt = $pdo->prepare("SELECT id FROM categories WHERE id = :id AND parent_id IS NULL");
+    // Verificar si la categoría principal existe (nuevo esquema no tiene parent_id)
+    $stmt = $pdo->prepare("SELECT id FROM categories WHERE id = :id");
     $stmt->bindParam(':id', $parent_id, PDO::PARAM_INT);
     $stmt->execute();
 
@@ -47,19 +48,37 @@ try {
         exit();
     }
 
-    // Insertar la subcategoría
-    $stmt = $pdo->prepare("INSERT INTO categories (name, parent_id) VALUES (:name, :parent_id)");
+    // Generar slug para la subcategoría
+    $slug = strtolower(trim(preg_replace('/[^A-Za-z0-9-]+/', '-', iconv('UTF-8', 'ASCII//TRANSLIT', $name)),'-'));
+
+    // Insertar en tabla subcategories
+    $stmt = $pdo->prepare("INSERT INTO subcategories (category_id, name, slug) VALUES (:category_id, :name, :slug)");
+    $stmt->bindParam(':category_id', $parent_id, PDO::PARAM_INT);
     $stmt->bindParam(':name', $name, PDO::PARAM_STR);
-    $stmt->bindParam(':parent_id', $parent_id, PDO::PARAM_INT);
+    $stmt->bindParam(':slug', $slug, PDO::PARAM_STR);
     $stmt->execute();
 
     $subcategory_id = $pdo->lastInsertId();
     error_log("Subcategoría creada correctamente: ID " . $subcategory_id);
 
-    echo json_encode(['success' => true, 'message' => 'Subcategoría creada correctamente.', 'subcategory' => ['id' => $subcategory_id, 'name' => $name]]);
+    echo json_encode(['success' => true, 'message' => 'Subcategoría creada correctamente.', 'subcategory' => ['id' => $subcategory_id, 'name' => $name, 'slug' => $slug]]);
 } catch (PDOException $e) {
-    error_log("Error al crear la subcategoría: " . $e->getMessage());
+    $msg = $e->getMessage();
+    $code = $e->getCode();
+    if (stripos($msg, 'subcategories') !== false && (stripos($msg, 'doesn') !== false || stripos($msg, 'no such') !== false || stripos($msg, 'exist') !== false)) {
+        // Si la tabla no existe tratamos subcategorías como desactivadas
+        error_log('[create_subcategory] Tabla subcategories no existe. Devolver no-op.');
+        http_response_code(200);
+        echo json_encode(['success' => true, 'message' => 'Subcategorías no habilitadas (tabla inexistente).']);
+        exit();
+    }
+    if ($code == 23000) { // Duplicado
+        http_response_code(409);
+        echo json_encode(['success' => false, 'message' => 'La subcategoría ya existe.']);
+        exit();
+    }
+    error_log("Error al crear la subcategoría: " . $msg);
     http_response_code(500); // Internal Server Error
-    echo json_encode(['success' => false, 'message' => 'Error al crear la subcategoría.', 'error' => $e->getMessage()]);
+    echo json_encode(['success' => false, 'message' => 'Error al crear la subcategoría.', 'error' => $msg]);
 }
 ?>

@@ -1,5 +1,6 @@
 // src/components/admin/ProductosAdmin.js
 import React, { useState, useEffect } from "react";
+import { formatCLP } from '../../utils/formatters';
 import { Link, useNavigate } from "react-router-dom";
 import './ProductosAdmin.css'; // Asegúrate de tener este archivo CSS
 
@@ -9,7 +10,7 @@ function ProductosAdmin() {
   const [error, setError] = useState(null);
   const navigate = useNavigate();
 
-  // Cargar productos (sin cambios)
+  // Cargar productos (actualizado para nuevo esquema)
   useEffect(() => {
     const fetchProducts = async () => {
       setLoading(true);
@@ -40,6 +41,16 @@ function ProductosAdmin() {
     };
     fetchProducts();
   }, []);
+
+  const buildImageUrl = (path) => {
+    if (!path) return null;
+    // Si ya es absoluta (http/https), devolver tal cual
+    if (/^https?:\/\//i.test(path)) return path;
+    // Normalizar: si no empieza con 'backend/', anteponerlo para servir desde XAMPP
+    const normalized = path.replace(/^\/+/, '');
+    const withBackend = normalized.startsWith('backend/') ? normalized : `backend/${normalized}`;
+    return `http://localhost/schizotactical/${withBackend}`;
+  };
 
   // Eliminar producto (sin cambios)
   const handleDelete = async (id) => {
@@ -105,7 +116,7 @@ function ProductosAdmin() {
           <thead>
             <tr>
               <th>ID</th>
-              <th>Imagen</th>
+              <th>Portada</th>
               <th>Nombre</th>
               <th>Modelo</th>
               <th>Precio</th>
@@ -119,9 +130,9 @@ function ProductosAdmin() {
               <tr key={product.id}>
                 <td>{product.id}</td>
                 <td>
-                  {product.main_image ? (
+                  {product.cover_image ? (
                     <img
-                       src={`http://localhost/schizotactical/backend/${product.main_image}`}
+                       src={buildImageUrl(product.cover_image)}
                        alt={product.name || 'Producto'}
                        className="product-thumbnail"
                        onError={(e) => { e.target.style.display = 'none'; }} // Oculta si la imagen no carga
@@ -132,11 +143,14 @@ function ProductosAdmin() {
                 </td>
                 <td>{product.name || 'N/A'}</td>
                 <td>{product.model || 'N/A'}</td>
-                <td>${product.price ? Number(product.price).toLocaleString('es-CL') : '0'}</td>
+                <td>{formatCLP(product.price)}</td>
                 <td>
-                  {product.stock_option === 'instock'
-                    ? `En Stock (${product.stock_quantity || '0'})`
-                    : 'Por encargo'}
+                  {(() => {
+                    const status = product?.stock_status
+                      ? (product.stock_status === 'en_stock' ? 'En stock' : 'Por encargo')
+                      : (product?.stock_option === 'instock' ? 'En stock' : 'Por encargo');
+                    return status;
+                  })()}
                 </td>
                  <td>
                    <span className={`status ${product.is_active === 1 || product.is_active === '1' ? 'status-active' : 'status-inactive'}`}>

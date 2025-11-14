@@ -1,0 +1,32 @@
+.product-list-page-container {
+	color: #e9ecef; /* Texto claro sobre fondo oscuro unificado */
+	padding: 1rem 1.5rem;
+}
+
+.product-list-page-container h2 {
+	color: #e9ecef;
+    margin-bottom: 0.5rem;
+}
+
+/* Selects en modo oscuro */
+.product-list-page-container .form-select {
+	background-color: #2a2d34;
+	color: #e9ecef;
+	border: 1px solid #3a3d45;
+	border-radius: 6px;
+	padding: 0.5rem 0.75rem;
+}
+
+.product-list-page-container .form-select:focus {
+	outline: none;
+	border-color: #4361ee;
+	box-shadow: 0 0 0 0.25rem rgba(67, 97, 238, 0.25);
+}
+
+.product-list-page-container .error-message {
+	color: #dc3545;
+}
+
+.product-list-page-container .form-select {
+	max-width: 260px;
+}

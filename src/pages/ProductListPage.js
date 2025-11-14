@@ -2,40 +2,32 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import ProductCard from '../components/ProductCard';
-// import './ProductListPage.css'; // Asegúrate de que este archivo exista o elimina la importación
+import './ProductListPage.css';
 
 function ProductListPage() {
   const [products, setProducts] = useState([]);
-  const [isLoading, setIsLoading] = useState(true); // Inicia como true
+  const [categories, setCategories] = useState([]);
+  const [selectedCategoryId, setSelectedCategoryId] = useState('');
+  const [sort, setSort] = useState('newest'); // newest | price_asc | price_desc | name
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchParams] = useSearchParams();
 
-  const category = searchParams.get('category');
-  const subcategory = searchParams.get('subcategory');
+  // Soportar parámetros iniciales opcionales
+  const categoryParam = searchParams.get('category_id') || searchParams.get('category') || '';
+  const sortParam = searchParams.get('sort') || '';
 
   useEffect(() => {
     const fetchProducts = async () => {
       // 1. Inicia la carga y limpia errores/productos anteriores
       setIsLoading(true);
       setError(null);
-      // setProducts([]); // Considera si realmente necesitas limpiar aquí o si prefieres mostrar los anteriores mientras carga
-
       let apiUrl = 'http://localhost/schizotactical/backend/get_products.php';
-      const params = new URLSearchParams(); // Usar URLSearchParams para construir la query string
-
-      if (subcategory) {
-        params.append('subcategory', subcategory);
-      } else if (category) {
-        params.append('category', category);
-      } else {
-        // Si no hay categoría ni subcategoría, establece un error y no hagas fetch
-        setError("Por favor, selecciona una categoría o subcategoría.");
-        setIsLoading(false);
-        setProducts([]); // Asegura que no haya productos
-        return; // Salir de la función
-      }
-
-      apiUrl += `?${params.toString()}`; // Añade los parámetros a la URL
+      const params = new URLSearchParams();
+      if (selectedCategoryId) params.append('category_id', selectedCategoryId);
+      if (sort) params.append('sort', sort);
+      const qs = params.toString();
+      if (qs) apiUrl += `?${qs}`;
 
       try {
         const response = await fetch(apiUrl);
@@ -63,20 +55,36 @@ function ProductListPage() {
         console.log("Carga finalizada."); // Log para ver cuándo termina isLoading
       }
     };
+    fetchProducts();
+  }, [selectedCategoryId, sort]);
 
-    // Llama a fetchProducts solo si hay categoría o subcategoría
-    if (category || subcategory) {
-      fetchProducts();
-    } else {
-      // Maneja el caso inicial o sin parámetros (ya cubierto en fetchProducts, pero podemos asegurar)
-      setIsLoading(false);
-      setError("Selecciona una categoría.");
-      setProducts([]);
-    }
+  // Cargar categorías y aplicar parámetros iniciales
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const resp = await fetch('http://localhost/schizotactical/backend/get_categories.php');
+        const cats = await resp.json();
+        if (Array.isArray(cats)) {
+          setCategories(cats);
+          // Si viene un category_id/category por query, configurarlo una vez
+          if (categoryParam) {
+            // Si es numérico, úsalo; si es nombre, intenta buscar su id
+            if (!isNaN(Number(categoryParam))) {
+              setSelectedCategoryId(String(categoryParam));
+            } else {
+              const match = cats.find(c => c.name === categoryParam);
+              if (match) setSelectedCategoryId(String(match.id));
+            }
+          }
+          if (sortParam) setSort(sortParam);
+        }
+      } catch (e) { /* opcional: manejar error silencioso */ }
+    };
+    fetchCategories();
+    // Solo necesitamos correr esto cuando cambie el query param en la URL
+  }, [categoryParam, sortParam]);
 
-  }, [category, subcategory]); // El efecto se re-ejecuta si cambian los parámetros
-
-  const pageTitle = subcategory ? `Productos en ${subcategory}` : (category ? `Productos en ${category}` : 'Productos');
+  const pageTitle = 'Productos';
 
   // Log para depurar el estado en cada renderizado
   console.log("Renderizando - isLoading:", isLoading, "error:", error, "products.length:", products.length);
@@ -84,6 +92,27 @@ function ProductListPage() {
   return (
     <div className="product-list-page-container">
       <h2>{pageTitle}</h2>
+
+      {/* Filtros */}
+      <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
+        <select
+          className="form-select"
+          value={selectedCategoryId}
+          onChange={(e) => setSelectedCategoryId(e.target.value)}
+        >
+          <option value="">Todas las categorías</option>
+          {categories.map((c) => (
+            <option key={c.id} value={c.id}>{c.name}</option>
+          ))}
+        </select>
+
+        <select className="form-select" value={sort} onChange={(e) => setSort(e.target.value)}>
+          <option value="newest">Recién llegados</option>
+          <option value="price_asc">Menor precio</option>
+          <option value="price_desc">Mayor precio</option>
+          <option value="name">Nombre (A-Z)</option>
+        </select>
+      </div>
 
       {/* 1. Muestra 'Cargando...' solo si isLoading es true */}
       {isLoading && <p>Cargando productos...</p>}
@@ -100,7 +129,7 @@ function ProductListPage() {
             ))
           ) : (
             // Este mensaje se muestra si !isLoading, !error, y products.length es 0
-            <p>No se encontraron productos para "{subcategory || category}".</p>
+            <p>No se encontraron productos.</p>
           )}
         </div>
       )}

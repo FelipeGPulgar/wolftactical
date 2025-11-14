@@ -1,12 +1,11 @@
 import React, { useState, useEffect, useCallback } from "react";
 import "./Carousel.css";
-import carrusel1 from "../Images/Carrusel1.jpeg";
-import carrusel2 from "../Images/Carrusel2.jpeg";
+
 import carrusel3 from "../Images/Carrusel3.png";
 import carrusel4 from "../Images/Carrusel4.jpeg";
 
 function Carousel() {
-  const images = [carrusel1, carrusel2, carrusel3, carrusel4];
+  const images = [carrusel3, carrusel4];
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
 

@@ -41,7 +41,6 @@ header("Content-Type: application/json");
 
 // --- Manejo de solicitud GET ---
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
-    // ... (El código para GET no necesita cambios, se mantiene igual que antes) ...
     $productId = $_GET['id'] ?? null;
 
     if (!$productId || !filter_var($productId, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]])) {
@@ -52,8 +51,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $productId = (int)$productId;
 
     try {
-        // 1. Obtener datos del producto
-        $stmt = $pdo->prepare("SELECT id, name, model, category_id, subcategory_id, stock_option, stock_quantity, price, main_image, is_active FROM products WHERE id = :id");
+        // 1. Obtener datos del producto (ajustado a nuevo esquema)
+        $stmt = $pdo->prepare("SELECT id, name, model, category_id, subcategory_id, price, stock_status, includes_note, video_url, is_active
+                               FROM products WHERE id = :id");
         $stmt->execute([':id' => $productId]);
         $product = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -63,25 +63,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             die(json_encode(['success' => false, 'message' => 'Producto no encontrado con ID: ' . $productId]));
         }
 
-        // 2. Obtener todas las categorías PRINCIPALES
-        $catStmt = $pdo->query("SELECT id, name FROM categories WHERE parent_id IS NULL ORDER BY name");
+    // 1.1. Adaptar campos esperados por el frontend
+        // stock_option (frontend) <-> stock_status (DB)
+        $product['stock_option'] = ($product['stock_status'] === 'en_stock') ? 'instock' : 'preorder';
+        // stock_quantity no existe en el esquema simplificado; devolver vacío
+        $product['stock_quantity'] = null;
+        // main_image: calcular portada desde product_images
+        $imgSql = "SELECT path FROM product_images WHERE product_id = :pid AND is_cover = 1
+                   ORDER BY sort_order ASC, id ASC LIMIT 1";
+        $imgStmt = $pdo->prepare($imgSql);
+        $imgStmt->execute([':pid' => $productId]);
+        $cover = $imgStmt->fetchColumn();
+        if (!$cover) {
+            $imgSql2 = "SELECT path FROM product_images WHERE product_id = :pid
+                        ORDER BY sort_order ASC, id ASC LIMIT 1";
+            $imgStmt2 = $pdo->prepare($imgSql2);
+            $imgStmt2->execute([':pid' => $productId]);
+            $cover = $imgStmt2->fetchColumn();
+        }
+    $product['main_image'] = $cover ?: null;
+
+    // 1.2. Traer TODAS las imágenes del producto (galería)
+    $imgsStmt = $pdo->prepare("SELECT id, path, is_cover, sort_order FROM product_images WHERE product_id = :pid ORDER BY is_cover DESC, sort_order ASC, id ASC");
+    $imgsStmt->execute([':pid' => $productId]);
+    $images = $imgsStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // 2. Obtener todas las categorías (sin jerarquía parent_id)
+        $catStmt = $pdo->query("SELECT id, name FROM categories ORDER BY name");
         if (!$catStmt) {
-             throw new PDOException("Error crítico al obtener categorías principales.");
+            throw new PDOException("Error crítico al obtener categorías.");
         }
         $categories = $catStmt->fetchAll(PDO::FETCH_ASSOC);
 
-        // 3. Obtener subcategorías de la categoría ACTUAL del producto
+        // 3. Obtener subcategorías si existe la tabla y si hay category_id
         $subcategories = [];
         $categoryIdToFetchSubcategories = $product['category_id'] ?? null;
-
         if ($categoryIdToFetchSubcategories) {
-             $subStmt = $pdo->prepare("SELECT id, name FROM categories WHERE parent_id = :category_id ORDER BY name");
-             if ($subStmt) {
-                 $subStmt->execute([':category_id' => $categoryIdToFetchSubcategories]);
-                 $subcategories = $subStmt->fetchAll(PDO::FETCH_ASSOC);
-             } else {
-                 error_log("[GET Warning] No se pudieron preparar subcategorías para category_id (parent_id): " . $categoryIdToFetchSubcategories);
-             }
+            try {
+                // Intentar consultar en subcategories (nuevo esquema)
+                $subStmt = $pdo->prepare("SELECT id, name FROM subcategories WHERE category_id = :category_id ORDER BY name");
+                $subStmt->execute([':category_id' => $categoryIdToFetchSubcategories]);
+                $subcategories = $subStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            } catch (Throwable $t) {
+                // Si la tabla no existe, simplemente dejar vacío
+                error_log('[GET Info] Tabla subcategories no disponible o sin datos: ' . $t->getMessage());
+                $subcategories = [];
+            }
         }
 
         // 4. Devolver la respuesta JSON combinada
@@ -89,7 +116,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             'success' => true,
             'product' => $product,
             'categories' => $categories,
-            'subcategories' => $subcategories
+            'subcategories' => $subcategories,
+            'images' => $images
         ]);
 
     } catch (PDOException $e) {
@@ -111,9 +139,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $subcategory_id_input = filter_input(INPUT_POST, 'subcategory', FILTER_VALIDATE_INT, ["options" => ["min_range" => 1]]);
     $subcategory_id = ($subcategory_id_input === false || $subcategory_id_input === null) ? null : $subcategory_id_input;
     $stock_option = $_POST['stock_option'] ?? 'preorder';
-    $stock_quantity_input = $_POST['stock_quantity'] ?? null;
+    $stock_quantity_input = $_POST['stock_quantity'] ?? null; // No usado en DB simplificada
     $price_input = $_POST['price'] ?? null;
     $is_active = isset($_POST['is_active']) ? 1 : 0;
+
+    // Campos adicionales: descripción, incluye, video_url
+    $descripcion = $_POST['descripcion'] ?? null;
+    $incluye = $_POST['incluye'] ?? null;
+    $video_url = $_POST['video_url'] ?? null;
 
     // --- Validación de Datos (igual que antes) ---
     if ($id === false || $id === null) { /* ... */ die(json_encode(['success' => false, 'message' => 'ID de producto inválido...'])); }
@@ -122,21 +155,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $price = (float)$price_input;
     $stock_quantity = null;
     if ($stock_option === 'instock') {
-        if ($stock_quantity_input === null || $stock_quantity_input === '' || filter_var($stock_quantity_input, FILTER_VALIDATE_INT, ['options' => ['min_range' => 0]]) === false) { /* ... */ die(json_encode(['success' => false, 'message' => 'La cantidad en stock debe ser...'])); }
-        $stock_quantity = (int)$stock_quantity_input;
+        if ($stock_quantity_input !== null && $stock_quantity_input !== '' && filter_var($stock_quantity_input, FILTER_VALIDATE_INT, ['options' => ['min_range' => 0]]) !== false) {
+            $stock_quantity = (int)$stock_quantity_input; // No se guarda en DB, solo validación superficial
+        } else {
+            $stock_quantity = null;
+        }
     }
 
     // --- Obtener TODOS los datos actuales del producto ANTES de actualizar ---
     $current_product_data = null;
     try {
-        $stmt_current = $pdo->prepare("SELECT name, model, category_id, subcategory_id, stock_option, stock_quantity, price, is_active, main_image FROM products WHERE id = :id");
+        $stmt_current = $pdo->prepare("SELECT name, model, category_id, subcategory_id, stock_status, price, is_active, description, includes_note, video_url FROM products WHERE id = :id");
         $stmt_current->execute(['id' => $id]);
         $current_product_data = $stmt_current->fetch(PDO::FETCH_ASSOC);
         if (!$current_product_data) { /* ... (manejo de producto no encontrado) ... */ }
     } catch (PDOException $e) { /* ... (manejo de error DB) ... */ }
 
     // --- Manejo de Imagen (igual que antes) ---
-    $main_image_path = $current_product_data['main_image'];
+    $main_image_path = null; // Ya no hay columna main_image en products
     $image_updated = false;
     // ... (código de manejo de imagen sin cambios) ...
     if (isset($_FILES['main_image']) && $_FILES['main_image']['error'] === UPLOAD_ERR_OK && !empty($_FILES['main_image']['tmp_name'])) {
@@ -155,12 +191,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $target_file_absolute = $target_dir_absolute . $new_filename;
         $new_image_relative_path = $target_dir_relative . $new_filename;
         if (move_uploaded_file($_FILES['main_image']['tmp_name'], $target_file_absolute)) {
-            $old_image_absolute_path = __DIR__ . '/' . $current_product_data['main_image'];
-            if (!empty($current_product_data['main_image']) && $current_product_data['main_image'] !== $new_image_relative_path && file_exists($old_image_absolute_path)) {
-                 if (@unlink($old_image_absolute_path)) { /* ... */ } else { /* ... */ }
+            // Guardar como portada en product_images (establecer otras portadas a 0)
+            try {
+                $pdo->beginTransaction();
+                $pdo->prepare("UPDATE product_images SET is_cover = 0 WHERE product_id = :pid")->execute([':pid' => $id]);
+                $pdo->prepare("INSERT INTO product_images (product_id, path, alt, is_cover, sort_order) VALUES (:pid, :path, :alt, 1, 0)")
+                    ->execute([':pid' => $id, ':path' => $new_image_relative_path, ':alt' => $name]);
+                $pdo->commit();
+                $main_image_path = $new_image_relative_path;
+                $image_updated = true;
+            } catch (Throwable $t) {
+                $pdo->rollBack();
+                error_log('[Image Update Error] ' . $t->getMessage());
             }
-            $main_image_path = $new_image_relative_path;
-            $image_updated = true;
         } else { /* ... */ }
     } elseif (isset($_FILES['main_image']) && $_FILES['main_image']['error'] !== UPLOAD_ERR_NO_FILE) { /* ... */ }
 
@@ -170,15 +213,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
         $sql_update = "UPDATE products SET
                     name = :name, model = :model, category_id = :category_id, subcategory_id = :subcategory_id,
-                    stock_option = :stock_option, stock_quantity = :stock_quantity, price = :price,
-                    main_image = :main_image, is_active = :is_active, updated_at = NOW()
+                    stock_status = :stock_status, price = :price,
+                    description = :description, includes_note = :includes_note, video_url = :video_url,
+                    is_active = :is_active, updated_at = NOW()
                 WHERE id = :id";
         $stmt_update = $pdo->prepare($sql_update);
-        $update_params = [ /* ... (parámetros de update) ... */
-            ':name' => $name, ':model' => $model ?: null, ':category_id' => $category_id,
-            ':subcategory_id' => $subcategory_id, ':stock_option' => $stock_option,
-            ':stock_quantity' => $stock_quantity, ':price' => $price,
-            ':main_image' => $main_image_path, ':is_active' => $is_active, ':id' => $id
+        $update_params = [
+            ':name' => $name,
+            ':model' => $model ?: null,
+            ':category_id' => $category_id,
+            ':subcategory_id' => $subcategory_id,
+            ':stock_status' => ($stock_option === 'instock' ? 'en_stock' : 'por_encargo'),
+            ':price' => $price,
+            ':description' => ($descripcion !== null ? $descripcion : $current_product_data['description']),
+            ':includes_note' => ($incluye !== null ? $incluye : $current_product_data['includes_note']),
+            ':video_url' => ($video_url !== null ? $video_url : $current_product_data['video_url']),
+            ':is_active' => $is_active,
+            ':id' => $id
         ];
         $update_executed = $stmt_update->execute($update_params);
         $rows_affected = $stmt_update->rowCount();
@@ -198,8 +249,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                  'price' => ['label' => 'Precio', 'old' => (float)$current_product_data['price'], 'new' => $price],
                  'category_id' => ['label' => 'Categoría', 'old' => $current_product_data['category_id'], 'new' => $category_id], // Podrías mostrar nombres en lugar de IDs
                  'subcategory_id' => ['label' => 'Subcategoría', 'old' => $current_product_data['subcategory_id'], 'new' => $subcategory_id], // Podrías mostrar nombres
-                 'stock_option' => ['label' => 'Opción Stock', 'old' => $current_product_data['stock_option'], 'new' => $stock_option],
-                 'stock_quantity' => ['label' => 'Cantidad Stock', 'old' => $current_product_data['stock_quantity'], 'new' => $stock_quantity],
+                 'stock_status' => ['label' => 'Estado Stock', 'old' => $current_product_data['stock_status'], 'new' => ($stock_option === 'instock' ? 'en_stock' : 'por_encargo')],
                  'is_active' => ['label' => 'Estado Activo', 'old' => (int)$current_product_data['is_active'], 'new' => $is_active]
              ];
 
@@ -278,7 +328,53 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
              // *****************************************************************
 
              // Respuesta de éxito general para la actualización del producto
-             echo json_encode(['success' => true, 'message' => 'Producto actualizado correctamente']);
+             // Procesar imágenes adicionales si fueron enviadas
+             $added_gallery = 0;
+             if (isset($_FILES['additional_images'])) {
+                 $multi = $_FILES['additional_images'];
+                 if (is_array($multi['name'])) {
+                     $target_dir_relative = "uploads/";
+                     $target_dir_absolute = __DIR__ . '/' . $target_dir_relative;
+                     if (!is_dir($target_dir_absolute)) { @mkdir($target_dir_absolute, 0775, true); }
+                     $allowed_extensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+
+                     // Obtener sort_order máximo actual para continuar
+                     $maxSort = 0;
+                     try {
+                         $maxStmt = $pdo->prepare("SELECT COALESCE(MAX(sort_order), 0) FROM product_images WHERE product_id = :pid");
+                         $maxStmt->execute([':pid' => $id]);
+                         $maxSort = (int)$maxStmt->fetchColumn();
+                     } catch (Throwable $t) { $maxSort = 0; }
+
+                     $sqlImg = "INSERT INTO product_images (product_id, path, alt, is_cover, sort_order) VALUES (:product_id, :path, :alt, 0, :sort_order)";
+                     $stmtImg = $pdo->prepare($sqlImg);
+
+                     $count = count($multi['name']);
+                     for ($i = 0; $i < $count; $i++) {
+                         if (!empty($multi['name'][$i]) && isset($multi['tmp_name'][$i]) && $multi['error'][$i] === UPLOAD_ERR_OK) {
+                             $ext = strtolower(pathinfo($multi['name'][$i], PATHINFO_EXTENSION));
+                             $check = @getimagesize($multi['tmp_name'][$i]);
+                             if ($check && in_array($ext, $allowed_extensions)) {
+                                 $new_filename = uniqid('prod_' . $id . '_add_', true) . '.' . $ext;
+                                 $target_file_absolute = $target_dir_absolute . $new_filename;
+                                 $image_relative_path = $target_dir_relative . $new_filename;
+                                 if (move_uploaded_file($multi['tmp_name'][$i], $target_file_absolute)) {
+                                     $maxSort++;
+                                     $stmtImg->execute([
+                                         ':product_id' => $id,
+                                         ':path' => $image_relative_path,
+                                         ':alt' => $name,
+                                         ':sort_order' => $maxSort
+                                     ]);
+                                     $added_gallery++;
+                                 }
+                             }
+                         }
+                     }
+                 }
+             }
+
+             echo json_encode(['success' => true, 'message' => 'Producto actualizado correctamente', 'gallery_added' => $added_gallery]);
 
         } else if ($update_executed && $rows_affected === 0 && !$image_updated) {
              // La consulta se ejecutó bien, pero no cambió nada

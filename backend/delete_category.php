@@ -32,7 +32,7 @@ error_log("Categoría ID recibido: " . $category_id);
 
 try {
     // Verificar si la categoría existe y no tiene un parent_id
-    $stmt = $pdo->prepare("SELECT id FROM categories WHERE id = :id AND parent_id IS NULL");
+    $stmt = $pdo->prepare("SELECT id FROM categories WHERE id = :id");
     $stmt->bindParam(':id', $category_id, PDO::PARAM_INT);
     $stmt->execute();
 
@@ -43,11 +43,15 @@ try {
         exit();
     }
 
-    // Eliminar las subcategorías asociadas
-    $stmt = $pdo->prepare("DELETE FROM categories WHERE parent_id = :parent_id");
-    $stmt->bindParam(':parent_id', $category_id, PDO::PARAM_INT);
-    $stmt->execute();
-    error_log("Subcategorías eliminadas para la categoría ID: " . $category_id);
+    // Eliminar las subcategorías asociadas (nuevo esquema en tabla subcategories)
+    try {
+        $stmtSub = $pdo->prepare("DELETE FROM subcategories WHERE category_id = :category_id");
+        $stmtSub->bindParam(':category_id', $category_id, PDO::PARAM_INT);
+        $stmtSub->execute();
+        error_log("Subcategorías eliminadas para la categoría ID: " . $category_id);
+    } catch (Throwable $t) {
+        error_log('[delete_category] No se eliminaron subcategorías (tabla puede no existir): ' . $t->getMessage());
+    }
 
     // Eliminar la categoría principal
     $stmt = $pdo->prepare("DELETE FROM categories WHERE id = :id");

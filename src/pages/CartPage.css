@@ -1,0 +1,94 @@
+/* Dark themed, scoped styles for the cart page */
+
+.cart-container {
+  max-width: 1100px;
+  margin: 2rem auto;
+  padding: 2rem;
+  background-color: #21242b;
+  color: #e9ecef;
+  border: 1px solid #2f323a;
+  border-radius: 10px;
+  box-shadow: 0 12px 24px rgba(0,0,0,0.25);
+  font-variant-numeric: tabular-nums; /* Dígitos de ancho fijo para evitar saltos */
+}
+
+.cart-container h2 {
+  margin-top: 0;
+  color: #e9ecef;
+}
+
+/* Ensure generic form-group from admin css doesn't change layout here */
+.cart-container .form-group {
+  display: block;
+  margin-bottom: 1rem;
+}
+
+.cart-container .form-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid #2a2d34;
+}
+
+/* Inputs */
+.cart-container .form-control {
+  background-color: #2a2d34;
+  color: #e9ecef;
+  border: 1px solid #3a3d45;
+  border-radius: 6px;
+}
+.cart-container .form-control:focus {
+  outline: none;
+  border-color: #4361ee;
+  box-shadow: 0 0 0 0.25rem rgba(67,97,238,0.25);
+}
+
+/* Buttons (scoped to cart) */
+.cart-container .btn {
+  padding: 0.65rem 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  border: 1px solid #3a3d45;
+  background: #2a2d34;
+  color: #e9ecef;
+}
+.cart-container .btn:hover {
+  background: #343843;
+}
+
+.cart-container .btn-primary {
+  background: #4361ee;
+  border-color: #4361ee;
+  color: #fff;
+}
+.cart-container .btn-primary:hover {  
+  background: #3f57d8;
+  border-color: #3f57d8;
+}
+
+.cart-container .btn-secondary {
+  background: #2a2d34;
+  color: #e9ecef;
+  border: 1px solid #3a3d45;
+}
+
+/* Right stats block */
+.cart-container .totals-block {
+  text-align: right;
+  min-width: 180px;
+}
+
+/* Item line separator color tweak */
+.cart-container .item-row {
+  border-bottom: 1px solid #2a2d34;
+}
+
+@media (max-width: 640px) {
+  .cart-container .form-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

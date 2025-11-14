@@ -18,19 +18,22 @@ function EditarProducto() {
     name: '',
     model: '',
     main_category: '', // Almacenará el ID de la categoría
-    subcategory: '',   // Almacenará el ID de la subcategoría
     stock_option: 'preorder',
     stock_quantity: '',
     price: '',
     main_image: null, // Para el archivo nuevo, si se selecciona
     is_active: 1,     // Default a activo
+    video_url: ''
   });
   const [currentImageUrl, setCurrentImageUrl] = useState(''); // URL de la imagen actual
   const [imagePreview, setImagePreview] = useState(null); // Vista previa de la nueva imagen
   const [categories, setCategories] = useState([]); // Lista de categorías principales
-  const [subcategories, setSubcategories] = useState([]); // Lista de subcategorías (dinámica)
+  const [gallery, setGallery] = useState([]); // Imágenes existentes del producto
+  const [additionalImages, setAdditionalImages] = useState([]); // Nuevas imágenes a agregar
+  // Subcategorías deshabilitadas
   const [isLoading, setIsLoading] = useState(true); // Estado de carga general
   const [error, setError] = useState(null); // Mensaje de error para UI
+  const [newCategory, setNewCategory] = useState('');
 
   // --- Efecto para Cargar Datos Iniciales del Producto ---
   useEffect(() => {
@@ -83,7 +86,6 @@ function EditarProducto() {
             name: product.name || '',
             model: product.model || '',
             main_category: product.category_id || '', // ID de categoría
-            subcategory: product.subcategory_id || '', // ID de subcategoría
             stock_option: product.stock_option || 'preorder',
             // Asegurar que stock_quantity sea string para el input number
             stock_quantity: product.stock_quantity !== null ? String(product.stock_quantity) : '',
@@ -91,6 +93,7 @@ function EditarProducto() {
             main_image: null, // Resetear el campo de archivo
             // Convertir a 1 o 0 para el checkbox
             is_active: (product.is_active === 1 || product.is_active === '1') ? 1 : 0,
+            video_url: product.video_url || ''
           });
           console.log("[Carga Inicial] Estado formData actualizado.");
 
@@ -99,11 +102,13 @@ function EditarProducto() {
           setCurrentImageUrl(imageUrl);
           console.log("[Carga Inicial] URL de imagen actual establecida:", imageUrl || '(Ninguna)');
 
-          // Cargar listas de categorías y subcategorías iniciales
+          // Cargar listas de categorías
           setCategories(data.categories || []);
-          // Las subcategorías recibidas son las de la categoría actual del producto
-          setSubcategories(data.subcategories || []);
-          console.log(`[Carga Inicial] Categorías cargadas: ${data.categories?.length || 0}, Subcategorías iniciales: ${data.subcategories?.length || 0}`);
+          console.log(`[Carga Inicial] Categorías cargadas: ${data.categories?.length || 0}`);
+
+          // Cargar galería completa
+          setGallery(Array.isArray(data.images) ? data.images : []);
+          console.log(`[Carga Inicial] Imágenes en galería: ${Array.isArray(data.images) ? data.images.length : 0}`);
 
         } else {
           console.error("[Error Carga Inicial] Respuesta del backend no exitosa o faltan datos. Mensaje:", data?.message);
@@ -121,46 +126,7 @@ function EditarProducto() {
     fetchData(); // Ejecutar la función de carga
   }, [id]); // Dependencia: el ID de la URL
 
-  // --- Efecto para Cargar Subcategorías dinámicamente ---
-  useEffect(() => {
-    // Solo ejecutar si no estamos en la carga inicial y hay una categoría seleccionada
-    if (!isLoading && formData.main_category) {
-      const fetchSubcategories = async () => {
-        console.log(`[Subcategorías] Cargando para category_id: ${formData.main_category}`);
-        // Limpiar subcategorías actuales mientras se cargan las nuevas
-        setSubcategories([]);
-        try {
-          // Llamada GET al endpoint de subcategorías
-          const response = await fetch(`http://localhost/schizotactical/backend/get_subcategories.php?category_id=${formData.main_category}`, {
-              credentials: 'include' // Importante si requiere sesión
-          });
-          if (!response.ok) {
-             console.error(`[Error Subcategorías] Respuesta HTTP no OK. Status: ${response.status}`);
-             throw new Error(`Error HTTP ${response.status}`);
-          }
-          const data = await response.json();
-          console.log("[Subcategorías] Respuesta recibida:", data);
-          // Manejar diferentes formatos de respuesta posibles
-          if (Array.isArray(data)) {
-             setSubcategories(data);
-          } else if (data.success && Array.isArray(data.data)) {
-             setSubcategories(data.data);
-          } else {
-             console.warn("[Subcategorías] Formato inesperado, estableciendo vacío.");
-             setSubcategories([]); // Dejar vacío si no hay o el formato es incorrecto
-          }
-        } catch (err) {
-          console.error('[Error Subcategorías] Error detallado:', err);
-          setSubcategories([]); // Asegurar array vacío en caso de error
-        }
-      };
-      fetchSubcategories();
-    } else if (!formData.main_category) {
-        // Si no hay categoría principal, limpiar las subcategorías
-        setSubcategories([]);
-    }
-    // Dependencias: se ejecuta si cambia la categoría principal o finaliza la carga inicial
-  }, [formData.main_category, isLoading]);
+  // Subcategorías deshabilitadas: no cargar
 
   // --- Manejador de Cambios en Inputs y Selects ---
   const handleChange = (e) => {
@@ -168,10 +134,14 @@ function EditarProducto() {
     setFormData(prev => ({
       ...prev,
       // Manejar checkbox (is_active) y otros inputs
-      [name]: type === 'checkbox' ? (checked ? 1 : 0) : value,
-      // Si cambia la categoría principal, resetear la subcategoría seleccionada
-      ...(name === 'main_category' ? { subcategory: '' } : {})
+      [name]: type === 'checkbox' ? (checked ? 1 : 0) : value
     }));
+  };
+
+  // --- Manejador: nuevas imágenes adicionales (múltiples) ---
+  const handleAdditionalImagesChange = (e) => {
+    const files = Array.from(e.target.files || []);
+    setAdditionalImages(files);
   };
 
   // --- Manejador de Cambio de Archivo (Imagen) ---
@@ -190,6 +160,56 @@ function EditarProducto() {
       setImagePreview(null);
     }
   };
+
+  // --- Crear categoría ---
+  const handleCreateCategory = async () => {
+    if (!newCategory.trim()) return;
+    try {
+      const response = await fetch('http://localhost/schizotactical/backend/create_category.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ name: newCategory.trim() })
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || `Error HTTP ${response.status}`);
+      }
+      // Agregar a la lista y seleccionar la nueva categoría
+      setCategories((prev) => [...prev, data.category]);
+      setFormData((prev) => ({ ...prev, main_category: data.category.id, subcategory: '' }));
+      setNewCategory('');
+    } catch (err) {
+      console.error('Error creando categoría:', err);
+      setError(`No se pudo crear la categoría: ${err.message}`);
+    }
+  };
+
+  // --- Eliminar categoría seleccionada ---
+  const handleDeleteCategory = async () => {
+    if (!formData.main_category) return;
+    if (!window.confirm('¿Eliminar la categoría seleccionada?')) return;
+    try {
+      const response = await fetch('http://localhost/schizotactical/backend/delete_category.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ category_id: formData.main_category })
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || `Error HTTP ${response.status}`);
+      }
+      // Quitar de la lista y limpiar selección
+      setCategories((prev) => prev.filter(c => c.id !== Number(formData.main_category)));
+      setFormData((prev) => ({ ...prev, main_category: '', subcategory: '' }));
+    } catch (err) {
+      console.error('Error eliminando categoría:', err);
+      setError(`No se pudo eliminar la categoría: ${err.message}`);
+    }
+  };
+
+  // Subcategorías deshabilitadas
 
   // --- Manejador de Envío del Formulario (Actualización) ---
   const handleSubmit = async (e) => {
@@ -218,6 +238,13 @@ function EditarProducto() {
          formDataToSend.append(key, '');
       }
     });
+
+    // Adjuntar nuevas imágenes adicionales
+    if (additionalImages.length > 0) {
+      additionalImages.forEach((file) => {
+        if (file) formDataToSend.append('additional_images[]', file);
+      });
+    }
 
     // Log para depuración (opcional)
     // console.log("[Submit] FormData a enviar:");
@@ -251,6 +278,11 @@ function EditarProducto() {
       }
       // Verificar el flag 'success' del backend
       if (data.success) {
+        // Actualizar galería si el backend agregó imágenes
+        if (typeof data.gallery_added === 'number' && data.gallery_added > 0) {
+          // Forzar recarga de datos para reflejar nuevas imágenes
+          window.setTimeout(() => window.location.reload(), 300);
+        }
         console.log("[Submit] Producto actualizado con éxito.");
         alert('Producto actualizado con éxito'); // Mensaje para el usuario
         navigate('/admin/productos'); // Redirigir a la lista
@@ -304,29 +336,31 @@ function EditarProducto() {
                 <option key={category.id} value={category.id}>{category.name}</option>
               ))}
             </select>
-          </div>
-          <div className="form-group">
-            <label htmlFor="subcategory" className="form-label">Subcategoría</label>
-            <select
-              id="subcategory"
-              name="subcategory"
-              className="form-select"
-              value={formData.subcategory}
-              onChange={handleChange}
-              disabled={!formData.main_category} // Deshabilitar si no hay categoría principal
+            {/* Crear/Eliminar categoría */}
+            <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+              <input
+                type="text"
+                placeholder="Nueva categoría"
+                value={newCategory}
+                onChange={(e) => setNewCategory(e.target.value)}
+                className="form-control"
+                style={{ flex: 1 }}
+              />
+              <button type="button" className="btn btn-primary" onClick={handleCreateCategory}>
+                Crear categoría
+              </button>
+            </div>
+            <button
+              type="button"
+              className="btn btn-danger"
+              style={{ marginTop: '0.5rem' }}
+              onClick={handleDeleteCategory}
+              disabled={!formData.main_category}
             >
-              <option value="">
-                {/* Texto dinámico en la opción por defecto */}
-                {formData.main_category
-                  ? (subcategories.length > 0 ? 'Seleccione subcategoría (opcional)' : 'Sin subcategorías')
-                  : 'Seleccione categoría primero'}
-              </option>
-              {/* Mapear subcategorías disponibles */}
-              {subcategories.map(sub => (
-                <option key={sub.id} value={sub.id}>{sub.name}</option>
-              ))}
-            </select>
+              Eliminar categoría seleccionada
+            </button>
           </div>
+          {/* Subcategorías deshabilitadas */}
         </div>
 
         {/* Opciones de Stock y Cantidad (lado a lado) */}
@@ -367,6 +401,12 @@ function EditarProducto() {
              </div>
         </div>
 
+        {/* Video URL */}
+        <div className="form-group">
+          <label htmlFor="video_url" className="form-label">Video URL (opcional)</label>
+          <input type="url" id="video_url" name="video_url" className="form-control" placeholder="https://..." value={formData.video_url} onChange={handleChange} />
+        </div>
+
         {/* Imagen Principal */}
         <div className="form-group">
           <label htmlFor="main_image" className="form-label">Imagen Principal</label>
@@ -388,6 +428,39 @@ function EditarProducto() {
              accept="image/*" // Aceptar cualquier tipo de imagen
           />
           <small>Selecciona una nueva imagen solo si deseas reemplazar la actual.</small>
+        </div>
+
+        {/* Galería existente (solo lectura en esta versión) */}
+        <div className="form-group">
+          <label className="form-label">Galería Actual</label>
+          <div className="image-upload-container">
+            {gallery.length === 0 && <div style={{color: '#6c757d'}}>No hay imágenes adicionales.</div>}
+            {gallery.map((img) => (
+              <div key={img.id} className="image-upload-box">
+                <img
+                  src={`http://localhost/schizotactical/backend/${img.path}`}
+                  alt={formData.name}
+                  className="image-upload-preview"
+                  style={{ height: '150px' }}
+                />
+                <small>{img.is_cover ? 'Portada' : `Orden: ${img.sort_order}`}</small>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Agregar nuevas imágenes a la galería */}
+        <div className="form-group">
+          <label htmlFor="additional_images" className="form-label">Agregar a Galería (puedes seleccionar varias)</label>
+          <input
+            type="file"
+            id="additional_images"
+            name="additional_images"
+            className="form-control"
+            onChange={handleAdditionalImagesChange}
+            accept="image/*"
+            multiple
+          />
         </div>
 
         {/* Botones de Acción */}

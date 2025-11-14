@@ -9,6 +9,9 @@ import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Admin from "./pages/Admin";
 import ProductListPage from "./pages/ProductListPage";
+import ProductDetailPage from "./pages/ProductDetailPage";
+import CartPage from "./pages/CartPage";
+import Contact from "./pages/Contact";
 import "./styles.css";
 
 // Componente para proteger rutas administrativas (sin cambios)
@@ -42,6 +45,9 @@ function App() {
             }
           />
           <Route path="/productos" element={<ProductListPage />} />
+          <Route path="/producto/:id" element={<ProductDetailPage />} />
+          <Route path="/cart" element={<CartPage />} />
+          <Route path="/contacto" element={<Contact />} />
           {/* Otras rutas públicas (ejemplos comentados) */}
           {/* <Route path="/producto/:id" element={<ProductDetailPage />} /> */}
           {/* <Route path="/carrito" element={<CartPage />} /> */}

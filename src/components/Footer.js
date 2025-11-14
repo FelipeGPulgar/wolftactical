@@ -1,5 +1,4 @@
 import React from "react";
-import { Link } from "react-router-dom";
 import "./Footer.css";
 
 function Footer() {
@@ -14,41 +13,7 @@ function Footer() {
             top-notch products and exceptional customer service.
           </p>
         </div>
-        <div className="footer-section">
-          <h3>Enlaces Rapidos</h3>
-          <ul>
-            <li>
-              <Link to="/deals">Deals</Link>
-            </li>
-            <li>
-              <Link to="/holsters">Holsters</Link>
-            </li>
-            <li>
-              <Link to="/rifle">Rifle</Link>
-            </li>
-            <li>
-              <Link to="/pistol">Pistol</Link>
-            </li>
-            <li>
-              <Link to="/body-armor">Body Armor</Link>
-            </li>
-            <li>
-              <Link to="/night-vision">Night Vision</Link>
-            </li>
-            <li>
-              <Link to="/tactical-gear">Tactical Gear</Link>
-            </li>
-            <li>
-              <Link to="/plate-carriers">Plate Carriers</Link>
-            </li>
-            <li>
-              <Link to="/pouches">Pouches</Link>
-            </li>
-            <li>
-              <Link to="/belts">Belts</Link>
-            </li>
-          </ul>
-        </div>
+
         <div className="footer-section">
           <h3>Contactanos</h3>
           <p>Email: info@schizotactical.com</p>

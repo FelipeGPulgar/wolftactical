@@ -26,12 +26,17 @@ if (!isset($_GET['category_id'])) {
 $category_id = intval($_GET['category_id']);
 
 try {
-    $query = "SELECT id, name FROM categories WHERE parent_id = :category_id";
-    $stmt = $pdo->prepare($query);
-    $stmt->bindParam(':category_id', $category_id, PDO::PARAM_INT);
-    $stmt->execute();
-
-    $subcategories = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    try {
+        $query = "SELECT id, name FROM subcategories WHERE category_id = :category_id ORDER BY name";
+        $stmt = $pdo->prepare($query);
+        $stmt->bindParam(':category_id', $category_id, PDO::PARAM_INT);
+        $stmt->execute();
+        $subcategories = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Throwable $t) {
+        // Si no existe la tabla subcategories, devolver lista vacía
+        error_log('[get_subcategories] Tabla subcategories no disponible: ' . $t->getMessage());
+        $subcategories = [];
+    }
 
     echo json_encode($subcategories);
 } catch (Exception $e) {

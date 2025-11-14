@@ -1,4 +1,6 @@
 <?php
+// Tecnologías usadas: Frontend React (JS/JSX, Fetch API, react-router-dom), CSS, Backend PHP (PDO, sesiones, CORS, JSON, subida de archivos), Base de datos MySQL (products, categories, product_images), entorno XAMPP.
+
 // --- INICIO: Habilitar errores para depuración ---
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
@@ -16,6 +18,7 @@ if (isset($_SERVER['HTTP_ORIGIN'])) {
 }
 header("Access-Control-Allow-Methods: POST, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type, Authorization");
+header("Vary: Origin");
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
@@ -51,21 +54,23 @@ $name = filter_input(INPUT_POST, 'name', FILTER_SANITIZE_SPECIAL_CHARS);
 $model = filter_input(INPUT_POST, 'model', FILTER_SANITIZE_SPECIAL_CHARS);
 // Validar IDs como enteros positivos
 $category_id = filter_input(INPUT_POST, 'main_category', FILTER_VALIDATE_INT, ["options" => ["min_range" => 1]]);
-$subcategory_id = filter_input(INPUT_POST, 'subcategory', FILTER_VALIDATE_INT, ["options" => ["min_range" => 1]]);
-$stock_option = $_POST['stock_option'] ?? 'preorder'; // $_POST es seguro para valores fijos
-$stock_quantity_input = $_POST['stock_quantity'] ?? null; // Obtener como string o null
+// Subcategorías deshabilitadas
+$stock_option = $_POST['stock_option'] ?? 'preorder'; // 'preorder' | 'instock' (frontend)
+$stock_quantity_input = $_POST['stock_quantity'] ?? null; // No se guarda en el esquema simplificado
 $price_input = $_POST['price'] ?? null;
 // CORRECCIÓN: El campo is_active no se estaba enviando desde el form JS.
 // Asumiremos 1 (activo) por defecto si no se envía, o tomaremos el valor si se envía.
 // El form JS actual no tiene un input para is_active, así que siempre será 1.
 $is_active = isset($_POST['is_active']) ? (int)$_POST['is_active'] : 1;
 
-// Handle new fields
-$descripcion = $_POST['descripcion'] ?? null;
-$diseno = $_POST['diseno'] ?? null;
-$materiales = $_POST['materiales'] ?? null;
-$incluye = $_POST['incluye'] ?? null;
-$tiene_colores = isset($_POST['colors']) ? 1 : 0;
+// Handle new fields (mapeo a columnas reales)
+$descripcion = $_POST['descripcion'] ?? null; // -> products.description
+$incluye = $_POST['incluye'] ?? null;       // -> products.includes_note
+$video_url = $_POST['video_url'] ?? null;    // -> products.video_url (si se envía)
+
+// Eliminar variable $tiene_colores (ya no se usará)
+// $tiene_colores = isset($_POST['colors']) ? 1 : 0;
+$tiene_colores = 0; // No usado en esquema simplificado (ignorar)
 
 // Validaciones
 // Check if filter_input returned false (invalid int) or null (not set) for category_id
@@ -82,12 +87,9 @@ $price = (float)$price_input; // Convertir a float
 
 $stock_quantity = null;
 if ($stock_option === 'instock') {
-    // Check if filter_var returned false (invalid int) or if it's null/empty string
-    if ($stock_quantity_input === null || $stock_quantity_input === '' || filter_var($stock_quantity_input, FILTER_VALIDATE_INT) === false || (int)$stock_quantity_input < 0) {
-        http_response_code(400);
-        die(json_encode(['success' => false, 'message' => 'La cantidad en stock debe ser un número entero válido (0 o mayor) cuando la opción es "En stock".']));
-    }
-    $stock_quantity = (int)$stock_quantity_input;
+    // En el esquema actual no guardamos cantidad; sólo mapeamos estado
+    $stock_quantity = (is_numeric($stock_quantity_input) && (int)$stock_quantity_input >= 0)
+        ? (int)$stock_quantity_input : null;
 }
 
 // --- Manejo de Imagen Principal ---
@@ -149,40 +151,71 @@ $paramsProduct = []; // Define outside try block for logging in catch
 try {
     $pdo->beginTransaction(); // Iniciar transacción
 
-    // Insertar producto principal
-    // Ensure column names match your DB schema exactly
-    $sqlInsertProduct = "INSERT INTO products (name, model, category_id, subcategory_id, stock_option, stock_quantity, price, descripcion, diseno, materiales, incluye, tiene_colores, main_image, is_active, created_at, updated_at)
-                         VALUES (:name, :model, :category_id, :subcategory_id, :stock_option, :stock_quantity, :price, :descripcion, :diseno, :materiales, :incluye, :tiene_colores, :main_image, :is_active, NOW(), NOW())";
+    // Generar slug desde el nombre
+    $slug = strtolower(trim(preg_replace('/[^A-Za-z0-9-]+/', '-', @iconv('UTF-8','ASCII//TRANSLIT',$name)),'-'));
+    if (!$slug) { $slug = strtolower(trim(preg_replace('/\s+/', '-', $name), '-')); }
+
+    // Mapear estado de stock
+    $stock_status = ($stock_option === 'instock') ? 'en_stock' : 'por_encargo';
+
+    // Insertar producto principal (esquema nuevo)
+    $sqlInsertProduct = "INSERT INTO products (
+        name, slug, description, price, model, category_id, subcategory_id, stock_status, includes_note, video_url, is_active
+    ) VALUES (
+        :name, :slug, :description, :price, :model, :category_id, :subcategory_id, :stock_status, :includes_note, :video_url, :is_active
+    )";
     $stmtProduct = $pdo->prepare($sqlInsertProduct);
     $paramsProduct = [
         ':name' => $name,
-        ':model' => $model ?: null, // Allow empty model as NULL
-        ':category_id' => $category_id, // Already validated as int
-        // Asegurarse de que subcategory_id sea NULL si no es válido o no se envió
-        ':subcategory_id' => ($subcategory_id === false || $subcategory_id === null) ? null : $subcategory_id,
-        ':stock_option' => $stock_option,
-        ':stock_quantity' => $stock_quantity, // Will be NULL if stock_option is not 'instock'
+        ':slug' => $slug,
+        ':description' => $descripcion ?: null,
         ':price' => $price,
-        ':descripcion' => $descripcion,
-        ':diseno' => $diseno,
-        ':materiales' => $materiales,
-        ':incluye' => $incluye,
-        ':tiene_colores' => $tiene_colores,
-        ':main_image' => $main_image_relative_path, // Relative path stored
-        ':is_active' => $is_active // Usar el valor determinado antes
+        ':model' => $model ?: null,
+        ':category_id' => $category_id,
+    ':subcategory_id' => null,
+        ':stock_status' => $stock_status,
+        ':includes_note' => $incluye ?: null,
+        ':video_url' => $video_url ?: null,
+        ':is_active' => $is_active
     ];
     $stmtProduct->execute($paramsProduct);
     $newProductId = $pdo->lastInsertId();
 
-    // Insertar Imágenes Adicionales (Assuming 'product_images' table exists)
-    // Check your form names match 'image_1', 'image_2'
+    // Insertar imagen principal como portada en product_images
+    if ($main_image_relative_path) {
+        // Asegurar que no queden múltiples portadas
+        $pdo->prepare("UPDATE product_images SET is_cover = 0 WHERE product_id = :pid")
+            ->execute([':pid' => $newProductId]);
+        $pdo->prepare("INSERT INTO product_images (product_id, path, alt, is_cover, sort_order) VALUES (:pid, :path, :alt, 1, 0)")
+            ->execute([':pid' => $newProductId, ':path' => $main_image_relative_path, ':alt' => $name]);
+    }
+
+    // Insertar Imágenes Adicionales (image_1, image_2) y soportar múltiples via additional_images[]
     $additional_images_files = [];
     if (isset($_FILES['image_1'])) $additional_images_files[] = $_FILES['image_1'];
     if (isset($_FILES['image_2'])) $additional_images_files[] = $_FILES['image_2'];
 
-    // Ensure product_images table exists with product_id, image_url, image_order columns
-    $sqlImg = "INSERT INTO product_images (product_id, image_url, image_order) VALUES (:product_id, :image_url, :image_order)";
-    $stmtImg = $pdo->prepare($sqlImg); // Prepare once outside the loop
+    // Nuevo: soporte para input múltiple "additional_images[]"
+    if (isset($_FILES['additional_images'])) {
+        // Estructura de $_FILES cuando es multiple: name[], type[], tmp_name[], error[], size[]
+        $multi = $_FILES['additional_images'];
+        if (is_array($multi['name'])) {
+            $count = count($multi['name']);
+            for ($i = 0; $i < $count; $i++) {
+                if (!empty($multi['name'][$i])) {
+                    $additional_images_files[] = [
+                        'name' => $multi['name'][$i],
+                        'type' => $multi['type'][$i] ?? null,
+                        'tmp_name' => $multi['tmp_name'][$i] ?? null,
+                        'error' => $multi['error'][$i] ?? UPLOAD_ERR_OK,
+                        'size' => $multi['size'][$i] ?? 0
+                    ];
+                }
+            }
+        }
+    }
+    $sqlImg = "INSERT INTO product_images (product_id, path, alt, is_cover, sort_order) VALUES (:product_id, :path, :alt, 0, :sort_order)";
+    $stmtImg = $pdo->prepare($sqlImg);
 
     foreach ($additional_images_files as $index => $imageFile) {
         if ($imageFile && $imageFile['error'] === UPLOAD_ERR_OK && !empty($imageFile['tmp_name'])) {
@@ -195,12 +228,13 @@ try {
                 $add_image_relative_path = $target_dir_relative . $add_new_filename; // Relative path
 
                 if (move_uploaded_file($imageFile['tmp_name'], $add_target_file_absolute)) {
-                    // Insert into product_images (let transaction handle failure)
+                    // Insert into product_images con sort_order 1, 2...
                     $image_order = $index + 1;
                     $stmtImg->execute([
                         ':product_id' => $newProductId,
-                        ':image_url' => $add_image_relative_path,
-                        ':image_order' => $image_order
+                        ':path' => $add_image_relative_path,
+                        ':alt' => $name,
+                        ':sort_order' => $image_order
                     ]);
                 } else {
                     // Log error but let the transaction potentially fail later if needed
@@ -214,36 +248,6 @@ try {
              // Log other upload errors for additional images
              error_log("Error en subida de imagen adicional {$index} (código: {$imageFile['error']}) para producto ID $newProductId");
         }
-    }
-
-    // Handle colors
-    if ($tiene_colores && isset($_FILES['colors'])) {
-        foreach ($_FILES['colors']['name'] as $index => $color_name) {
-            $color_hex = $_POST['colors'][$index]['color'];
-            $color_image = $_FILES['colors']['tmp_name'][$index];
-            $image_path = "uploads/color_{$newProductId}_{$index}_" . uniqid() . ".jpeg";
-            move_uploaded_file($color_image, $image_path);
-
-            $query = "INSERT INTO product_images (product_id, tipo, color_nombre, image_url, image_order) VALUES (?, 'color', ?, ?, ?)";
-            $stmt = $conn->prepare($query);
-            $stmt->bind_param("issi", $newProductId, $color_hex, $image_path, $index + 1);
-            $stmt->execute();
-        }
-    }
-
-    // Insertar la notificación (Assuming 'notifications' table exists)
-    if ($newProductId) {
-        // Ensure notifications table exists with product_id, message, type, created_at columns
-        $notificationMessage = "Nuevo producto agregado: '" . htmlspecialchars($name, ENT_QUOTES, 'UTF-8') . "' (ID: $newProductId)";
-        $notificationType = 'success';
-        $sqlNotify = "INSERT INTO notifications (product_id, message, type, created_at) VALUES (:product_id, :message, :type, NOW())";
-        $stmtNotify = $pdo->prepare($sqlNotify);
-        $stmtNotify->execute([
-            ':product_id' => $newProductId,
-            ':message' => $notificationMessage,
-            ':type' => $notificationType
-        ]);
-        error_log("Notificación creada para nuevo producto ID: " . $newProductId);
     }
 
     $pdo->commit(); // Confirmar transacción si todo fue bien
@@ -261,8 +265,8 @@ try {
     // Log the detailed error including parameters <-- ¡ESTA LÍNEA GUARDA EL ERROR DETALLADO!
     error_log("Error DB al agregar producto: " . $e->getMessage() . " - Code: " . $e->getCode() . " - Params: " . json_encode($paramsProduct));
     // Provide a more user-friendly message
-    if ($e->getCode() == 23000) { // Integrity constraint violation (e.g., UNIQUE key)
-         echo json_encode(['success' => false, 'message' => 'Error: Ya existe un producto con datos similares (ej. nombre o modelo único).']);
+    if ($e->getCode() == 23000) { // Violación de restricción (ej. slug único)
+        echo json_encode(['success' => false, 'message' => 'Error: Ya existe un producto con el mismo slug o nombre.']);
     } else {
          // Mensaje genérico que estás viendo
          echo json_encode(['success' => false, 'message' => 'Error en la base de datos al agregar el producto. Verifique los datos o contacte al administrador.']);

@@ -18,7 +18,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 require_once 'db.php';
 
 try {
-    $query = "SELECT id, name FROM categories WHERE parent_id IS NULL";
+    $query = "SELECT id, name FROM categories ORDER BY name";
     $stmt = $pdo->prepare($query);
     $stmt->execute();
 

@@ -1,33 +1,14 @@
 // src/components/Navbar.js
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
-import axios from "axios";
 import "./Navbar.css";
+import { useCart } from "../context/CartContext";
+import { formatCLP } from "../utils/formatters";
 
 function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
-  const [categories, setCategories] = useState([]);
-  const [error, setError] = useState(null); // Estado para manejar errores de carga
-
-  useEffect(() => {
-    // Fetch categories and subcategories from the backend
-    axios.get("http://localhost/schizotactical/backend/categories.php")
-      .then((response) => {
-        // Validar que la respuesta sea un array
-        if (Array.isArray(response.data)) {
-          setCategories(response.data);
-        } else {
-          console.error("Error: La respuesta de la API no es un array:", response.data);
-          setError("Formato de datos inesperado.");
-          setCategories([]); // Asegurar que sea un array vacío
-        }
-      })
-      .catch((error) => {
-        console.error("Error fetching categories:", error);
-        setError("No se pudieron cargar las categorías.");
-        setCategories([]); // Asegurar que sea un array vacío en caso de error
-      });
-  }, []);
+  const { totalItems, totalPrice } = useCart();
+  
 
   const toggleMenu = () => {
     setIsOpen(!isOpen);
@@ -41,7 +22,7 @@ function Navbar() {
   return (
     <nav className="navbar">
       <Link to="/" className="logo" onClick={closeMenu}> {/* Cierra menú al ir a Home */}
-        SchizoTactical
+        WolfTactical
       </Link>
 
       <div className={`menu-icon ${isOpen ? "open" : ""}`} onClick={toggleMenu}>
@@ -50,42 +31,16 @@ function Navbar() {
         <div className="bar"></div>
       </div>
 
-      {/* Mostrar error si no se cargan las categorías */}
-      {error && <div className="navbar-error">{error}</div>}
-
       <ul className={`nav-links ${isOpen ? "active" : ""}`}>
-        {/* Enlace a Home (opcional, si no está el logo) */}
-        {/* <li><Link to="/" onClick={closeMenu}>Inicio</Link></li> */}
-
-        {categories.map((category) => (
-          <li key={category.id} className="dropdown-container">
-            {/* Enlace para la Categoría Principal */}
-            <Link
-              // Apunta a /productos con el parámetro ?category=
-              to={`/productos?category=${encodeURIComponent(category.name)}`}
-              onClick={closeMenu} // Cierra el menú al hacer clic
-            >
-              {category.name}
-            </Link>
-            {/* Menú desplegable para Subcategorías */}
-            {category.subcategories && category.subcategories.length > 0 && (
-              <ul className="dropdown">
-                {category.subcategories.map((sub) => (
-                  <li key={sub.id}>
-                    {/* Enlace para la Subcategoría */}
-                    <Link
-                      // Apunta a /productos con el parámetro ?subcategory=
-                      to={`/productos?subcategory=${encodeURIComponent(sub.name)}`}
-                      onClick={closeMenu} // Cierra el menú al hacer clic
-                    >
-                      {sub.name}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </li>
-        ))}
+        <li>
+          <Link to="/" onClick={closeMenu}>Inicio</Link>
+        </li>
+        <li>
+          <Link to="/productos" onClick={closeMenu}>Productos</Link>
+        </li>
+        <li>
+          <Link to="/contacto" onClick={closeMenu}>Contactos</Link>
+        </li>
       </ul>
 
       <div className="nav-actions">
@@ -96,7 +51,6 @@ function Navbar() {
         </div>
         {/* Enlaces de acción también cierran el menú */}
         <Link to="/login" className="login-link" onClick={closeMenu}>Iniciar Sesión</Link>
-        <Link to="/register" className="register-link" onClick={closeMenu}>Registrarse</Link>
         {/* Icono del carrito - Sin cambios estructurales respecto a tu versión */}
         <Link to="/cart" className="cart-icon" onClick={closeMenu} aria-label="Carrito de compras">
           <svg
@@ -137,7 +91,13 @@ function Navbar() {
               </g>
             </g>
           </svg>
+          {totalItems > 0 && (
+            <span className="cart-badge">{totalItems}</span>
+          )}
         </Link>
+        <div className="cart-total" title="Total carrito">
+          {totalItems > 0 ? formatCLP(totalPrice) : ''}
+        </div>
       </div>
     </nav>
   );
