@@ -53,6 +53,7 @@ function Contact() {
         <div className="form-actions">
           <button type="submit" className="btn btn-primary" disabled={sending}>{sending ? 'Enviando...' : 'Enviar mensaje'}</button>
         </div>
+      </form>
       <div className="quick-contacts">
         <button className="btn btn-secondary" onClick={()=>sendWhatsApp(SITE.phones.martin)}>WhatsApp Martín</button>
         <button className="btn btn-secondary" onClick={()=>sendWhatsApp(SITE.phones.sebastian)}>WhatsApp Sebastián</button>
