@@ -44,7 +44,7 @@ function CartPage() {
     if (!okDomain) return alert('Solo se permiten Gmail, Hotmail u Outlook');
     setSendingEmail(true);
     try {
-      const resp = await fetch('http://localhost/schizotactical/backend/send_cart_email.php', {
+      const resp = await fetch('http://localhost/wolftactical/backend/send_cart_email.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

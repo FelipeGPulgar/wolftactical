@@ -10,7 +10,7 @@ function Admin() {
   useEffect(() => {
     const interval = setInterval(async () => {
       try {
-        const response = await fetch("http://localhost/schizotactical/backend/notificaciones.php", {
+        const response = await fetch("http://localhost/wolftactical/backend/notificaciones.php", {
           credentials: "include",
         });
         if (!response.ok) throw new Error("Error fetching notifications");

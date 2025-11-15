@@ -150,7 +150,7 @@ const NotificationManager = (props = {}) => {
   const refreshNotifications = async () => {
     setError(null);
     try {
-      const response = await fetch('http://localhost/schizotactical/backend/notificaciones.php', {
+      const response = await fetch('http://localhost/wolftactical/backend/notificaciones.php', {
         credentials: 'include',
       });
       if (!response.ok) {
@@ -234,7 +234,7 @@ const NotificationManager = (props = {}) => {
 export const useNotificationManager = () => {
   const refreshNotifications = async () => {
     try {
-      const response = await fetch('http://localhost/schizotactical/backend/notificaciones.php', {
+      const response = await fetch('http://localhost/wolftactical/backend/notificaciones.php', {
         credentials: 'include',
       });
       if (!response.ok) {
@@ -254,7 +254,7 @@ export const useNotificationManager = () => {
       return;
     }
     try {
-      const response = await fetch('http://localhost/schizotactical/backend/guardar_notificacion.php', {
+      const response = await fetch('http://localhost/wolftactical/backend/guardar_notificacion.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message, type }),

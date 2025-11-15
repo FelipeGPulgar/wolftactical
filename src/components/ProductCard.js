@@ -8,7 +8,7 @@ function ProductCard({ product }) {
   // Determinar campo de imagen de portada disponible: preferir cover_image, luego main_image
   const coverPath = product?.cover_image || product?.main_image || null;
   const imageUrl = coverPath
-    ? `http://localhost/schizotactical/backend/${coverPath}`
+    ? `http://localhost/wolftactical/backend/${coverPath}`
     : '/images/placeholder.png';
 
 

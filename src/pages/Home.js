@@ -2,7 +2,6 @@
 // Ya no necesitas useState ni useEffect si no cargas productos aquí
 import React from "react";
 import HeroSection from "../components/HeroSection";
-import Brands from "../components/Brands";
 import Subscribe from "../components/Subscribe";
 import Carousel from "../components/Carousel";
 import VideoSection from "../components/VideoSection";
@@ -35,7 +34,6 @@ function Home() {
       </div>
       */}
 
-      <Brands />
     </div>
   );
 }

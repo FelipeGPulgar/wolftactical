@@ -28,7 +28,7 @@ function ProductDetailPage() {
       setLoading(true);
       setError(null);
       try {
-        const resp = await fetch(`http://localhost/schizotactical/backend/get_products.php?id=${pid}`);
+        const resp = await fetch(`http://localhost/wolftactical/backend/get_products.php?id=${pid}`);
         const data = await resp.json();
         if (!resp.ok || !data.success || !data.data) throw new Error(data.message || 'No se pudo cargar el producto');
         const p = data.data;
@@ -37,7 +37,7 @@ function ProductDetailPage() {
         setImages(imgs);
         const cover = imgs.find(i => Number(i.is_cover) === 1) || null;
         const mainPath = (cover ? cover.path : (p.cover_image || p.main_image || (imgs[0] ? imgs[0].path : '')));
-        setMainImage(mainPath ? `http://localhost/schizotactical/backend/${mainPath}` : '');
+        setMainImage(mainPath ? `http://localhost/wolftactical/backend/${mainPath}` : '');
         const cols = Array.isArray(data.colors) ? data.colors : [];
         setColors(cols);
       } catch (e) {
@@ -108,7 +108,7 @@ function ProductDetailPage() {
     const okDomain = /@gmail\.com$|@hotmail\.com$|@outlook\.com$/i.test(email);
     if (!okDomain) return alert('Solo se permiten Gmail, Hotmail u Outlook');
     try {
-      const resp = await fetch('http://localhost/schizotactical/backend/send_order_email.php', {
+      const resp = await fetch('http://localhost/wolftactical/backend/send_order_email.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -144,11 +144,11 @@ function ProductDetailPage() {
               {images.map(img => (
                 <img
                   key={img.id}
-                  src={`http://localhost/schizotactical/backend/${img.path}`}
+                  src={`http://localhost/wolftactical/backend/${img.path}`}
                   alt={product.name}
                   className="image-upload-preview"
                   style={{height:'100px',cursor:'pointer'}}
-                  onClick={() => setMainImage(`http://localhost/schizotactical/backend/${img.path}`)}
+                  onClick={() => setMainImage(`http://localhost/wolftactical/backend/${img.path}`)}
                 />
               ))}
             </div>

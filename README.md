@@ -1,49 +1,52 @@
-# Getting Started with Create React App
+# WolfTactical
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+WolfTactical es una tienda y panel de administración para gestionar productos tácticos (chalecos, fundas, accesorios) construida sobre React y un backend PHP simple.
 
-## Available Scripts
+## Scripts Disponibles
 
-In the project directory, you can run:
+En el directorio del proyecto puedes ejecutar:
 
 ### `npm start`
-
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
-
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+Inicia la aplicación en modo desarrollo en http://localhost:3000.
 
 ### `npm test`
-
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+Ejecuta los tests en modo watch interactivo.
 
 ### `npm run build`
-
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
-
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+Genera el build de producción en la carpeta `build`.
 
 See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
 
 ### `npm run eject`
+Expone toda la configuración (Webpack, Babel, etc.) para personalización avanzada. Úsalo solo si necesitas controlar cada detalle.
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+## Más Información
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+Basado en Create React App. Documentación:
+- CRA: https://facebook.github.io/create-react-app/
+- React: https://reactjs.org/
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+## Endpoints Frontend (base)
+El frontend ahora apunta a: `http://localhost/wolftactical/backend/`
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+Ejemplos:
+```
+GET  http://localhost/wolftactical/backend/get_products.php
+POST http://localhost/wolftactical/backend/agregar_producto.php
+```
 
-## Learn More
+## Cambio de Nombre
+Se reemplazó todo `schizotactical` / `SchizoTactical` por `wolftactical` / `WolfTactical`.
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+## Backend
+Código PHP en carpeta `backend/`. Asegúrate que XAMPP sirva `/wolftactical/backend` en `http://localhost/wolftactical/backend/`.
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+## Autenticación Admin
+Login almacena `isAdminLoggedIn` en `localStorage` y usa cookies de sesión PHP.
+
+## Próximos Mejoras
+- Validación adicional de formularios.
+- Manejo centralizado de configuración de API mediante variable global o archivo .env.
 
 ### Code Splitting
 

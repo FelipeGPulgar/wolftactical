@@ -22,7 +22,7 @@ function ProductListPage() {
       // 1. Inicia la carga y limpia errores/productos anteriores
       setIsLoading(true);
       setError(null);
-      let apiUrl = 'http://localhost/schizotactical/backend/get_products.php';
+      let apiUrl = 'http://localhost/wolftactical/backend/get_products.php';
       const params = new URLSearchParams();
       if (selectedCategoryId) params.append('category_id', selectedCategoryId);
       if (sort) params.append('sort', sort);
@@ -62,7 +62,7 @@ function ProductListPage() {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const resp = await fetch('http://localhost/schizotactical/backend/get_categories.php');
+        const resp = await fetch('http://localhost/wolftactical/backend/get_categories.php');
         const cats = await resp.json();
         if (Array.isArray(cats)) {
           setCategories(cats);

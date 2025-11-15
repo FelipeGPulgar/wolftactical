@@ -36,7 +36,7 @@ function AgregarProducto() {
     const fetchCategories = async () => {
       try {
         // Asume que este endpoint devuelve un array de categorías [{id: 1, name: 'Cat1'}, ...]
-        const response = await fetch('http://localhost/schizotactical/backend/get_categories.php');
+        const response = await fetch('http://localhost/wolftactical/backend/get_categories.php');
         if (!response.ok) {
            throw new Error(`Error HTTP al cargar categorías: ${response.status}`);
         }
@@ -132,7 +132,7 @@ function AgregarProducto() {
   const handleCreateCategory = async () => {
     if (newCategory.trim()) {
       try {
-        const response = await fetch('http://localhost/schizotactical/backend/create_category.php', {
+        const response = await fetch('http://localhost/wolftactical/backend/create_category.php', {
           method: 'POST',
           body: JSON.stringify({ name: newCategory }),
           headers: { 'Content-Type': 'application/json' },
@@ -154,7 +154,7 @@ function AgregarProducto() {
   const handleDeleteCategory = async (categoryId) => {
     if (window.confirm('¿Estás seguro de que deseas eliminar esta categoría?')) {
       try {
-        const response = await fetch(`http://localhost/schizotactical/backend/delete_category.php`, {
+        const response = await fetch(`http://localhost/wolftactical/backend/delete_category.php`, {
           method: 'POST',
           body: JSON.stringify({ category_id: categoryId }),
           headers: { 'Content-Type': 'application/json' },
@@ -203,7 +203,7 @@ function AgregarProducto() {
     // }
 
     try {
-      const response = await fetch('http://localhost/schizotactical/backend/agregar_producto.php', {
+      const response = await fetch('http://localhost/wolftactical/backend/agregar_producto.php', {
         method: 'POST',
         credentials: 'include', // Enviar cookies (importante para la sesión PHP)
         body: formDataToSend

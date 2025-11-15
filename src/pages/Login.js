@@ -16,7 +16,7 @@ function Login() {
         setMessage('');
 
         try {
-            const response = await fetch('http://localhost/schizotactical/backend/login.php', {
+            const response = await fetch('http://localhost/wolftactical/backend/login.php', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

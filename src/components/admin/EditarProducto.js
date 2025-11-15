@@ -52,7 +52,7 @@ function EditarProducto() {
 
       try {
         // Llamada GET al backend para obtener los datos
-        const response = await fetch(`http://localhost/schizotactical/backend/editar_producto.php?id=${parsedId}`, {
+        const response = await fetch(`http://localhost/wolftactical/backend/editar_producto.php?id=${parsedId}`, {
              credentials: 'include', // Enviar cookies de sesión
         });
         console.log(`[Carga Inicial] Respuesta recibida, status: ${response.status}`);
@@ -98,7 +98,7 @@ function EditarProducto() {
           console.log("[Carga Inicial] Estado formData actualizado.");
 
           // Establecer URL de la imagen actual (si existe)
-          const imageUrl = product.main_image ? `http://localhost/schizotactical/backend/${product.main_image}` : '';
+          const imageUrl = product.main_image ? `http://localhost/wolftactical/backend/${product.main_image}` : '';
           setCurrentImageUrl(imageUrl);
           console.log("[Carga Inicial] URL de imagen actual establecida:", imageUrl || '(Ninguna)');
 
@@ -165,7 +165,7 @@ function EditarProducto() {
   const handleCreateCategory = async () => {
     if (!newCategory.trim()) return;
     try {
-      const response = await fetch('http://localhost/schizotactical/backend/create_category.php', {
+      const response = await fetch('http://localhost/wolftactical/backend/create_category.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -190,7 +190,7 @@ function EditarProducto() {
     if (!formData.main_category) return;
     if (!window.confirm('¿Eliminar la categoría seleccionada?')) return;
     try {
-      const response = await fetch('http://localhost/schizotactical/backend/delete_category.php', {
+      const response = await fetch('http://localhost/wolftactical/backend/delete_category.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -252,7 +252,7 @@ function EditarProducto() {
 
     try {
       // Llamada POST al backend para actualizar
-      const response = await fetch('http://localhost/schizotactical/backend/editar_producto.php', {
+      const response = await fetch('http://localhost/wolftactical/backend/editar_producto.php', {
         method: 'POST',
         credentials: 'include', // Enviar cookies
         body: formDataToSend // Enviar FormData
@@ -438,7 +438,7 @@ function EditarProducto() {
             {gallery.map((img) => (
               <div key={img.id} className="image-upload-box">
                 <img
-                  src={`http://localhost/schizotactical/backend/${img.path}`}
+                  src={`http://localhost/wolftactical/backend/${img.path}`}
                   alt={formData.name}
                   className="image-upload-preview"
                   style={{ height: '150px' }}

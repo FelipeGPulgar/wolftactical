@@ -16,7 +16,7 @@ function ProductosAdmin() {
       setLoading(true);
       setError(null);
       try {
-        const response = await fetch('http://localhost/schizotactical/backend/get_products.php', {
+        const response = await fetch('http://localhost/wolftactical/backend/get_products.php', {
           credentials: 'include'
         });
         if (!response.ok) {
@@ -49,7 +49,7 @@ function ProductosAdmin() {
     // Normalizar: si no empieza con 'backend/', anteponerlo para servir desde XAMPP
     const normalized = path.replace(/^\/+/, '');
     const withBackend = normalized.startsWith('backend/') ? normalized : `backend/${normalized}`;
-    return `http://localhost/schizotactical/${withBackend}`;
+    return `http://localhost/wolftactical/${withBackend}`;
   };
 
   // Eliminar producto (sin cambios)
@@ -57,7 +57,7 @@ function ProductosAdmin() {
     if (window.confirm(`¿Estás seguro de eliminar el producto con ID ${id}?`)) {
       try {
         const response = await fetch(
-          `http://localhost/schizotactical/backend/eliminar_producto.php?id=${id}`,
+          `http://localhost/wolftactical/backend/eliminar_producto.php?id=${id}`,
           {
             method: 'GET', // Considera usar DELETE si tu backend lo soporta
             credentials: 'include'

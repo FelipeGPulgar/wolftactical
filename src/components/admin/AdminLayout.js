@@ -11,7 +11,7 @@ function AdminLayout({ children }) {
     localStorage.removeItem('isAdminLoggedIn');
     
     // Hacer logout también en el backend
-    fetch('http://localhost/schizotactical/backend/logout.php', {
+    fetch('http://localhost/wolftactical/backend/logout.php', {
       method: 'POST',
       credentials: 'include'
     })

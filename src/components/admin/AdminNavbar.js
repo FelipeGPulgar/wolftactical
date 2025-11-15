@@ -13,7 +13,7 @@ const AdminNavbar = () => {
   const fetchNotifications = async () => {
     // setError(null); // No limpiar error automáticamente al refrescar
     try {
-      const response = await fetch('http://localhost/schizotactical/backend/notificaciones.php', {
+      const response = await fetch('http://localhost/wolftactical/backend/notificaciones.php', {
         credentials: 'include',
       });
       if (!response.ok) {
@@ -59,7 +59,7 @@ const AdminNavbar = () => {
     setError(null); // Limpiar error antes de intentar eliminar
     console.log(`Intentando eliminar notificación ID: ${id}`);
     try {
-      const response = await fetch('http://localhost/schizotactical/backend/eliminar_notificacion.php', {
+      const response = await fetch('http://localhost/wolftactical/backend/eliminar_notificacion.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
