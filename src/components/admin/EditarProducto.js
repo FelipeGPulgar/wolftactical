@@ -154,6 +154,7 @@ function EditarProducto() {
       const reader = new FileReader();
       reader.onloadend = () => setImagePreview(reader.result); // URL de datos para <img>
       reader.readAsDataURL(file);
+    } else {
       // Si el usuario cancela, limpiar el archivo y la vista previa
       setFormData((prev) => ({ ...prev, main_image: null }));
       setImagePreview(null);
@@ -185,6 +186,7 @@ function EditarProducto() {
   };
 
   // --- Eliminar categoría seleccionada ---
+  const handleDeleteCategory = async () => {
     if (!formData.main_category) return;
     if (!window.confirm('¿Eliminar la categoría seleccionada?')) return;
     try {
@@ -346,8 +348,7 @@ function EditarProducto() {
               </button>
             </div>
             <button
-                        <img
-                          src={mediaUrl(img.path)}
+              type="button"
               style={{ marginTop: '0.5rem' }}
               onClick={handleDeleteCategory}
               disabled={!formData.main_category}
