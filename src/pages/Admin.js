@@ -5,12 +5,13 @@ import ProductosAdmin from "../components/admin/ProductosAdmin";
 import AgregarProducto from "../components/admin/AgregarProducto";
 import EditarProducto from "../components/admin/EditarProducto";
 import AdminLayout from "../components/admin/AdminLayout"; // Ruta actualizada
+import { backendUrl } from '../config/api';
 
 function Admin() {
   useEffect(() => {
     const interval = setInterval(async () => {
       try {
-        const response = await fetch("http://localhost/wolftactical/backend/notificaciones.php", {
+        const response = await fetch(backendUrl('notificaciones.php'), {
           credentials: "include",
         });
         if (!response.ok) throw new Error("Error fetching notifications");

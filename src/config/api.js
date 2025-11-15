@@ -1,4 +1,24 @@
 // src/config/api.js
+// Centraliza la base del backend para que no quede fija a localhost
+
+const rawBase = process.env.REACT_APP_API_BASE || 'http://localhost/wolftactical';
+export const API_BASE = rawBase.replace(/\/$/, '');
+
+// Construye URLs a scripts PHP bajo /backend
+export function backendUrl(path) {
+  const clean = String(path || '').replace(/^\/+/, '');
+  return `${API_BASE}/backend/${clean}`;
+}
+
+// Construye URLs para servir archivos/imagenes que vienen como rutas relativas
+export function mediaUrl(relativePath) {
+  if (!relativePath) return '';
+  const str = String(relativePath);
+  if (/^https?:\/\//i.test(str)) return str;
+  const clean = str.replace(/^\/+/, '');
+  return `${API_BASE}/${clean}`;
+}
+// src/config/api.js
 // Base de API configurable para despliegue (Render, local, etc.)
 let resolvedApiBase = process.env.REACT_APP_API_BASE || '/backend';
 

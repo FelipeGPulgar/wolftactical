@@ -3,6 +3,7 @@ import { useCart } from '../context/CartContext';
 import { useNavigate } from 'react-router-dom';
 import { formatCLP } from '../utils/formatters';
 import './CartPage.css';
+import { backendUrl } from '../config/api';
 
 function CartPage() {
   const { items, totalItems, totalPrice, updateQuantity, removeItem, clear } = useCart();
@@ -44,7 +45,7 @@ function CartPage() {
     if (!okDomain) return alert('Solo se permiten Gmail, Hotmail u Outlook');
     setSendingEmail(true);
     try {
-      const resp = await fetch('http://localhost/wolftactical/backend/send_cart_email.php', {
+      const resp = await fetch(backendUrl('send_cart_email.php'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

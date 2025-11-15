@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import './Contact.css';
 import { SITE } from '../config/site';
+import { backendUrl } from '../config/api';
 
 function Contact() {
   const [name, setName] = useState('');
@@ -21,7 +22,7 @@ function Contact() {
     if (!okDomain) return alert('Solo se permiten Gmail, Hotmail u Outlook');
     setSending(true);
     try {
-      const resp = await fetch('http://localhost/wolftactical/backend/send_contact_email.php', {
+      const resp = await fetch(backendUrl('send_contact_email.php'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, email, message })
@@ -52,8 +53,6 @@ function Contact() {
         <div className="form-actions">
           <button type="submit" className="btn btn-primary" disabled={sending}>{sending ? 'Enviando...' : 'Enviar mensaje'}</button>
         </div>
-      </form>
-
       <div className="quick-contacts">
         <button className="btn btn-secondary" onClick={()=>sendWhatsApp(SITE.phones.martin)}>WhatsApp Martín</button>
         <button className="btn btn-secondary" onClick={()=>sendWhatsApp(SITE.phones.sebastian)}>WhatsApp Sebastián</button>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import './NotificationManager.css'; // Asegúrate que este archivo CSS exista y contenga los estilos
+import { backendUrl } from '../../config/api';
 
 // --- Componente Panel Lateral (Usado por AdminNavbar) ---
 // Recibe todo como props desde el componente que lo usa (AdminNavbar)
@@ -150,7 +151,7 @@ const NotificationManager = (props = {}) => {
   const refreshNotifications = async () => {
     setError(null);
     try {
-      const response = await fetch('http://localhost/wolftactical/backend/notificaciones.php', {
+      const response = await fetch(backendUrl('notificaciones.php'), {
         credentials: 'include',
       });
       if (!response.ok) {
@@ -234,7 +235,7 @@ const NotificationManager = (props = {}) => {
 export const useNotificationManager = () => {
   const refreshNotifications = async () => {
     try {
-      const response = await fetch('http://localhost/wolftactical/backend/notificaciones.php', {
+      const response = await fetch(backendUrl('notificaciones.php'), {
         credentials: 'include',
       });
       if (!response.ok) {
@@ -254,7 +255,7 @@ export const useNotificationManager = () => {
       return;
     }
     try {
-      const response = await fetch('http://localhost/wolftactical/backend/guardar_notificacion.php', {
+      const response = await fetch(backendUrl('guardar_notificacion.php'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message, type }),

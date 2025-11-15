@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import { formatCLP } from '../../utils/formatters';
 import { Link, useNavigate } from "react-router-dom";
 import './ProductosAdmin.css'; // Asegúrate de tener este archivo CSS
+import { backendUrl, mediaUrl } from '../../config/api';
 
 function ProductosAdmin() {
   const [products, setProducts] = useState([]);
@@ -16,7 +17,7 @@ function ProductosAdmin() {
       setLoading(true);
       setError(null);
       try {
-        const response = await fetch('http://localhost/wolftactical/backend/get_products.php', {
+        const response = await fetch(backendUrl('get_products.php'), {
           credentials: 'include'
         });
         if (!response.ok) {
@@ -42,22 +43,14 @@ function ProductosAdmin() {
     fetchProducts();
   }, []);
 
-  const buildImageUrl = (path) => {
-    if (!path) return null;
-    // Si ya es absoluta (http/https), devolver tal cual
-    if (/^https?:\/\//i.test(path)) return path;
-    // Normalizar: si no empieza con 'backend/', anteponerlo para servir desde XAMPP
-    const normalized = path.replace(/^\/+/, '');
-    const withBackend = normalized.startsWith('backend/') ? normalized : `backend/${normalized}`;
-    return `http://localhost/wolftactical/${withBackend}`;
-  };
+  const buildImageUrl = (path) => mediaUrl(path);
 
   // Eliminar producto (sin cambios)
   const handleDelete = async (id) => {
     if (window.confirm(`¿Estás seguro de eliminar el producto con ID ${id}?`)) {
       try {
         const response = await fetch(
-          `http://localhost/wolftactical/backend/eliminar_producto.php?id=${id}`,
+          backendUrl(`eliminar_producto.php?id=${id}`),
           {
             method: 'GET', // Considera usar DELETE si tu backend lo soporta
             credentials: 'include'

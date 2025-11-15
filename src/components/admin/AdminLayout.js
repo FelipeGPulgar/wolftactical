@@ -2,6 +2,7 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import './AdminLayout.css'; // Asegúrate de tener un archivo CSS para estilos
+import { backendUrl } from '../../config/api';
 
 function AdminLayout({ children }) {
   const navigate = useNavigate();
@@ -11,7 +12,7 @@ function AdminLayout({ children }) {
     localStorage.removeItem('isAdminLoggedIn');
     
     // Hacer logout también en el backend
-    fetch('http://localhost/wolftactical/backend/logout.php', {
+    fetch(backendUrl('logout.php'), {
       method: 'POST',
       credentials: 'include'
     })

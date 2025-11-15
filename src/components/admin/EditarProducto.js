@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 // Asegúrate de que este CSS exista y tenga los estilos necesarios
 import './AgregarProducto.css'; // Reutilizando estilos
+import { backendUrl, mediaUrl } from '../../config/api';
 
 function EditarProducto() {
   console.log("Renderizando EditarProducto..."); // Log inicial
@@ -52,7 +53,7 @@ function EditarProducto() {
 
       try {
         // Llamada GET al backend para obtener los datos
-        const response = await fetch(`http://localhost/wolftactical/backend/editar_producto.php?id=${parsedId}`, {
+           const response = await fetch(backendUrl(`editar_producto.php?id=${parsedId}`), {
              credentials: 'include', // Enviar cookies de sesión
         });
         console.log(`[Carga Inicial] Respuesta recibida, status: ${response.status}`);
@@ -98,7 +99,7 @@ function EditarProducto() {
           console.log("[Carga Inicial] Estado formData actualizado.");
 
           // Establecer URL de la imagen actual (si existe)
-          const imageUrl = product.main_image ? `http://localhost/wolftactical/backend/${product.main_image}` : '';
+          const imageUrl = product.main_image ? mediaUrl(product.main_image) : '';
           setCurrentImageUrl(imageUrl);
           console.log("[Carga Inicial] URL de imagen actual establecida:", imageUrl || '(Ninguna)');
 
@@ -107,8 +108,7 @@ function EditarProducto() {
           console.log(`[Carga Inicial] Categorías cargadas: ${data.categories?.length || 0}`);
 
           // Cargar galería completa
-          setGallery(Array.isArray(data.images) ? data.images : []);
-          console.log(`[Carga Inicial] Imágenes en galería: ${Array.isArray(data.images) ? data.images.length : 0}`);
+              setGallery(Array.isArray(data.images) ? data.images : []);
 
         } else {
           console.error("[Error Carga Inicial] Respuesta del backend no exitosa o faltan datos. Mensaje:", data?.message);
@@ -154,7 +154,6 @@ function EditarProducto() {
       const reader = new FileReader();
       reader.onloadend = () => setImagePreview(reader.result); // URL de datos para <img>
       reader.readAsDataURL(file);
-    } else {
       // Si el usuario cancela, limpiar el archivo y la vista previa
       setFormData((prev) => ({ ...prev, main_image: null }));
       setImagePreview(null);
@@ -165,7 +164,7 @@ function EditarProducto() {
   const handleCreateCategory = async () => {
     if (!newCategory.trim()) return;
     try {
-      const response = await fetch('http://localhost/wolftactical/backend/create_category.php', {
+      const response = await fetch(backendUrl('create_category.php'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -186,11 +185,10 @@ function EditarProducto() {
   };
 
   // --- Eliminar categoría seleccionada ---
-  const handleDeleteCategory = async () => {
     if (!formData.main_category) return;
     if (!window.confirm('¿Eliminar la categoría seleccionada?')) return;
     try {
-      const response = await fetch('http://localhost/wolftactical/backend/delete_category.php', {
+      const response = await fetch(backendUrl('delete_category.php'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -210,8 +208,6 @@ function EditarProducto() {
   };
 
   // Subcategorías deshabilitadas
-
-  // --- Manejador de Envío del Formulario (Actualización) ---
   const handleSubmit = async (e) => {
     e.preventDefault(); // Prevenir recarga
     setIsLoading(true); // Iniciar carga
@@ -252,7 +248,7 @@ function EditarProducto() {
 
     try {
       // Llamada POST al backend para actualizar
-      const response = await fetch('http://localhost/wolftactical/backend/editar_producto.php', {
+      const response = await fetch(backendUrl('editar_producto.php'), {
         method: 'POST',
         credentials: 'include', // Enviar cookies
         body: formDataToSend // Enviar FormData
@@ -265,10 +261,9 @@ function EditarProducto() {
 
       let data;
       try { data = JSON.parse(responseText); } // Intentar parsear
-      catch (jsonError) {
-          console.error("[Error Submit] Fallo al parsear JSON. Status:", response.status, "Error:", jsonError);
+        catch (jsonError) {
           throw new Error(`Respuesta inesperada del servidor al actualizar (Status ${response.status}, no es JSON): ${responseText.substring(0, 200)}...`);
-      }
+        }
 
       console.log("[Submit] Datos JSON parseados:", data);
 
@@ -351,8 +346,8 @@ function EditarProducto() {
               </button>
             </div>
             <button
-              type="button"
-              className="btn btn-danger"
+                        <img
+                          src={mediaUrl(img.path)}
               style={{ marginTop: '0.5rem' }}
               onClick={handleDeleteCategory}
               disabled={!formData.main_category}
@@ -438,7 +433,7 @@ function EditarProducto() {
             {gallery.map((img) => (
               <div key={img.id} className="image-upload-box">
                 <img
-                  src={`http://localhost/wolftactical/backend/${img.path}`}
+                  src={mediaUrl(img.path)}
                   alt={formData.name}
                   className="image-upload-preview"
                   style={{ height: '150px' }}

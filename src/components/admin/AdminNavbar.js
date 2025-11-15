@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './AdminNavbar.css'; // Importa los estilos SOLO de la navbar
 import { NotificationPanel } from './NotificationManager'; // Importa el panel
+import { backendUrl } from '../../config/api';
 
 const AdminNavbar = () => {
   const [notifications, setNotifications] = useState([]);
@@ -13,7 +14,7 @@ const AdminNavbar = () => {
   const fetchNotifications = async () => {
     // setError(null); // No limpiar error automáticamente al refrescar
     try {
-      const response = await fetch('http://localhost/wolftactical/backend/notificaciones.php', {
+      const response = await fetch(backendUrl('notificaciones.php'), {
         credentials: 'include',
       });
       if (!response.ok) {
@@ -59,7 +60,7 @@ const AdminNavbar = () => {
     setError(null); // Limpiar error antes de intentar eliminar
     console.log(`Intentando eliminar notificación ID: ${id}`);
     try {
-      const response = await fetch('http://localhost/wolftactical/backend/eliminar_notificacion.php', {
+      const response = await fetch(backendUrl('eliminar_notificacion.php'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom'; // Importa Link
 import '../Login.css'; // Asegúrate que la ruta sea correcta
+import { backendUrl } from '../config/api';
 
 function Login() {
     const [username, setUsername] = useState('');
@@ -16,7 +17,7 @@ function Login() {
         setMessage('');
 
         try {
-            const response = await fetch('http://localhost/wolftactical/backend/login.php', {
+                const response = await fetch(backendUrl('login.php'), {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

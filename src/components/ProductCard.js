@@ -3,13 +3,12 @@ import React from 'react';
 import { Link } from 'react-router-dom'; // Importa Link para enlazar al detalle
 import './ProductCard.css'; // Importa el archivo CSS
 import { formatCLP } from '../utils/formatters';
+import { mediaUrl } from '../config/api';
 
 function ProductCard({ product }) {
   // Determinar campo de imagen de portada disponible: preferir cover_image, luego main_image
   const coverPath = product?.cover_image || product?.main_image || null;
-  const imageUrl = coverPath
-    ? `http://localhost/wolftactical/backend/${coverPath}`
-    : '/images/placeholder.png';
+  const imageUrl = coverPath ? mediaUrl(coverPath) : '/images/placeholder.png';
 
 
  // Ruta a una imagen por defecto en tu carpeta 'public/images'

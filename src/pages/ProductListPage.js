@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import ProductCard from '../components/ProductCard';
+import { backendUrl } from '../config/api';
 import './ProductListPage.css';
 
 function ProductListPage() {
@@ -22,7 +23,7 @@ function ProductListPage() {
       // 1. Inicia la carga y limpia errores/productos anteriores
       setIsLoading(true);
       setError(null);
-      let apiUrl = 'http://localhost/wolftactical/backend/get_products.php';
+      let apiUrl = backendUrl('get_products.php');
       const params = new URLSearchParams();
       if (selectedCategoryId) params.append('category_id', selectedCategoryId);
       if (sort) params.append('sort', sort);
@@ -62,7 +63,7 @@ function ProductListPage() {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const resp = await fetch('http://localhost/wolftactical/backend/get_categories.php');
+        const resp = await fetch(backendUrl('get_categories.php'));
         const cats = await resp.json();
         if (Array.isArray(cats)) {
           setCategories(cats);
