@@ -1,0 +1,9 @@
+# Netlify proxy to your PHP backend (update the host below)
+# Example target when using ngrok: https://abc123.ngrok.io/wolftactical/backend
+
+# Route all frontend calls to /backend/* through Netlify to your backend
+# Replace REPLACE_WITH_YOUR_BACKEND_HOST with your current backend host (e.g., abc123.ngrok.io)
+/backend/notificaciones.php https://intercausative-julie-oratorically.ngrok-free.dev/wolftactical/backend/notificaciones.php 200!
+/backend/* https://intercausative-julie-oratorically.ngrok-free.dev/wolftactical/backend/:splat 200!
+# SPA fallback for React Router routes
+/* /index.html 200
