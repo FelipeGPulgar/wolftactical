@@ -1,11 +1,11 @@
 <?php
 // --- INICIO: Habilitar errores para depuración ---
 error_reporting(E_ALL);
-ini_set('display_errors', 1); // ¡MUY IMPORTANTE! Cambiar a 0 en producción
+ini_set('display_errors', 1);
 ini_set('log_errors', 1);
 // --- FIN: Depuración ---
 
-session_start(); // Mantener por si acaso
+session_start();
 $debug = isset($_GET['debug']);
 
 // Configuración dinámica de CORS
@@ -13,7 +13,7 @@ if (isset($_SERVER['HTTP_ORIGIN'])) {
     $allowed_origins = ['http://localhost:3000', 'http://localhost:3003', 'http://localhost:3004'];
     if (in_array($_SERVER['HTTP_ORIGIN'], $allowed_origins)) {
         header("Access-Control-Allow-Origin: " . $_SERVER['HTTP_ORIGIN']);
-        header("Access-Control-Allow-Credentials: true"); // Permitir credenciales
+        header("Access-Control-Allow-Credentials: true");
     }
 }
 header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
@@ -24,265 +24,106 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit();
 }
 
-require_once 'db.php'; // Asegúrate que $pdo se define aquí
-
-function tryQuery($pdo, $sql, $params) {
-    try {
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute($params);
-        return $stmt;
-    } catch (Throwable $e) {
-        error_log('[get_products fallback] SQL failed: ' . $e->getMessage() . ' | SQL: ' . $sql);
-        return null;
-    }
-}
+require_once 'db.php';
 
 try {
-    // --- Determinar qué se está solicitando ---
-    $productId = $_GET['id'] ?? null;
-    $categoryName = $_GET['category'] ?? null;
-    $subcategoryName = $_GET['subcategory'] ?? null;
+    // --- Parámetros de entrada ---
+    $productId = isset($_GET['id']) ? $_GET['id'] : null;
     $categoryId = isset($_GET['category_id']) ? $_GET['category_id'] : null;
-    $sort = $_GET['sort'] ?? null; // valores permitidos: newest, price_asc, price_desc, name
-    $show = $_GET['show'] ?? null; // 'all' para incluir inactivos
+    $sort = isset($_GET['sort']) ? $_GET['sort'] : 'newest';
+    $show = isset($_GET['show']) ? $_GET['show'] : null;
 
-    // --- Validación básica de parámetros ---
+    // --- Validación de Parámetros ---
     if ($productId !== null && !filter_var($productId, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]])) {
         http_response_code(400);
         die(json_encode(['success' => false, 'message' => 'ID de producto inválido.']));
     }
-    $productId = $productId ? (int)$productId : null; // Convertir a int si no es null
+    if ($categoryId !== null && $categoryId !== '' && !filter_var($categoryId, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]])) {
+        http_response_code(400);
+        die(json_encode(['success' => false, 'message' => 'ID de categoría inválido.']));
+    }
 
     // --- Construcción de la Consulta SQL ---
-    // Intentar usar la vista v_products_with_cover si existe
-    $sql = "SELECT vp.*, c_main.name AS category_name, sc.name AS subcategory_name
-            FROM v_products_with_cover vp ";
-    $params = [];
+    $sql = "
+        SELECT 
+            p.*,
+            c.name AS category_name
+        FROM products p
+        LEFT JOIN categories c ON p.category_id = c.id
+    ";
+
     $conditions = [];
-    $joins = ""; // String para almacenar los JOINs necesarios
+    $params = [];
 
-    // Condición de activos salvo que se pida 'show=all'
+    // Condición de activo (por defecto)
     if ($show !== 'all') {
-        $conditions[] = "vp.is_active = 1";
+        $conditions[] = "p.is_active = 1";
     }
 
-    if ($productId !== null) {
-        // --- Obtener un solo producto por ID ---
-        $conditions[] = "vp.id = :id";
-        $params[':id'] = $productId;
-        $joins .= " LEFT JOIN categories c_main ON vp.category_id = c_main.id ";
-        $joins .= " LEFT JOIN subcategories sc ON vp.subcategory_id = sc.id ";
-
-    } elseif ($subcategoryName !== null) {
-        // --- Obtener productos por NOMBRE de SUBCATEGORÍA ---
-        $joins .= " INNER JOIN subcategories sc ON vp.subcategory_id = sc.id ";
-    $conditions[] = "sc.name = :subcategory_name";
-        $params[':subcategory_name'] = $subcategoryName;
-
-        // Opcional: Si también se proporciona el nombre de la categoría principal, añadir otro join y condición
-        if ($categoryName !== null) {
-            // Asegurarnos que la subcategoría pertenece a la categoría principal correcta
-            $joins .= " INNER JOIN categories c_main ON vp.category_id = c_main.id ";
-            $conditions[] = "c_main.name = :category_name";
-            $params[':category_name'] = $categoryName;
-        } else {
-             // Si no se da categoría principal, añadimos el join para obtener su nombre
-             $joins .= " LEFT JOIN categories c_main ON vp.category_id = c_main.id ";
-        }
-
-    } elseif ($categoryName !== null) {
-        // --- Obtener productos por NOMBRE de CATEGORÍA PRINCIPAL ---
-        $joins .= " INNER JOIN categories c_main ON vp.category_id = c_main.id ";
-        $conditions[] = "c_main.name = :category_name";
-        $params[':category_name'] = $categoryName;
-        $joins .= " LEFT JOIN subcategories sc ON vp.subcategory_id = sc.id ";
-
-    } else {
-        // --- Obtener TODOS los productos (activos) ---
-        $joins .= " LEFT JOIN categories c_main ON vp.category_id = c_main.id ";
-        $joins .= " LEFT JOIN subcategories sc ON vp.subcategory_id = sc.id ";
+    // Filtro por ID de producto
+    if ($productId) {
+        $conditions[] = "p.id = :product_id";
+        $params[':product_id'] = $productId;
+    }
+    // Filtro por ID de categoría
+    elseif ($categoryId) {
+        $conditions[] = "p.category_id = :category_id";
+        $params[':category_id'] = $categoryId;
     }
 
-    // Filtro por category_id si se proporciona (tiene prioridad sobre category name)
-    if ($categoryId !== null) {
-        if (!filter_var($categoryId, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]])) {
-            http_response_code(400);
-            die(json_encode(['success' => false, 'message' => 'category_id inválido.']));
-        }
-        $joins .= " LEFT JOIN categories c_main ON vp.category_id = c_main.id ";
-        $conditions[] = "vp.category_id = :category_id";
-        $params[':category_id'] = (int)$categoryId;
-    }
-
-    // Combinar SQL, Joins y Condiciones
-    $sql .= $joins; // Añadir los joins
     if (!empty($conditions)) {
         $sql .= " WHERE " . implode(' AND ', $conditions);
     }
 
-    // Opcional: Añadir ordenación
-    // Ordenación
-    $orderBy = " ORDER BY vp.name ASC";
-    if ($sort === 'newest') {
-        $orderBy = " ORDER BY vp.created_at DESC, vp.id DESC";
-    } elseif ($sort === 'price_asc') {
-        $orderBy = " ORDER BY vp.price ASC, vp.id ASC";
-    } elseif ($sort === 'price_desc') {
-        $orderBy = " ORDER BY vp.price DESC, vp.id DESC";
-    } elseif ($sort === 'name') {
-        $orderBy = " ORDER BY vp.name ASC";
+    // --- Ordenación ---
+    $orderBy = "";
+    switch ($sort) {
+        case 'price_asc':
+            $orderBy = " ORDER BY p.price ASC, p.id ASC";
+            break;
+        case 'price_desc':
+            $orderBy = " ORDER BY p.price DESC, p.id DESC";
+            break;
+        case 'name':
+            $orderBy = " ORDER BY p.name ASC, p.id ASC";
+            break;
+        case 'newest':
+        default:
+            $orderBy = " ORDER BY p.id DESC"; // Usar id DESC para los más nuevos
+            break;
     }
-    $sql .= $orderBy; // Añadir ordenación
+    $sql .= $orderBy;
 
-    // --- Preparar y Ejecutar con fallbacks ---
-    $stmt = tryQuery($pdo, $sql, $params);
-
-    // Fallback 1: quitar filtro is_active por si la vista no incluye la columna
-    if (!$stmt) {
-        $sql_fb1 = str_replace(' WHERE vp.is_active = 1', ' WHERE 1=1', $sql);
-        $stmt = tryQuery($pdo, $sql_fb1, $params);
-        if ($stmt) { $sql = $sql_fb1; }
-    }
-
-    // Fallback 2: si no existe la vista, consultar directamente a products con subselect para cover_image
-    if (!$stmt) {
-        $sql_fb2 = "SELECT p.*, c_main.name AS category_name, sc.name AS subcategory_name,
-                        COALESCE(
-                           (SELECT pi1.path FROM product_images pi1 WHERE pi1.product_id = p.id AND pi1.is_cover = 1 ORDER BY pi1.sort_order ASC, pi1.id ASC LIMIT 1),
-                           (SELECT pi2.path FROM product_images pi2 WHERE pi2.product_id = p.id ORDER BY pi2.sort_order ASC, pi2.id ASC LIMIT 1)
-                        ) AS cover_image
-                     FROM products p ";
-        // reconstruir joins mínimos
-        $joins_min = '';
-        if (strpos($sql, 'categories c_main') !== false) {
-            $joins_min .= ' LEFT JOIN categories c_main ON p.category_id = c_main.id ';
-        }
-        if (strpos($sql, 'subcategories sc') !== false) {
-            $joins_min .= ' LEFT JOIN subcategories sc ON p.subcategory_id = sc.id ';
-        }
-        $sql_fb2 .= $joins_min;
-        if (!empty($conditions)) {
-            $conds2 = array_map(function($c){ return str_replace('vp.', 'p.', $c); }, $conditions);
-            $sql_fb2 .= ' WHERE ' . implode(' AND ', $conds2);
-        }
-    // Aplicar mismo criterio de orden en fallback
-    if ($sort === 'newest') { $sql_fb2 .= ' ORDER BY p.created_at DESC, p.id DESC'; }
-    elseif ($sort === 'price_asc') { $sql_fb2 .= ' ORDER BY p.price ASC, p.id ASC'; }
-    elseif ($sort === 'price_desc') { $sql_fb2 .= ' ORDER BY p.price DESC, p.id DESC'; }
-    else { $sql_fb2 .= ' ORDER BY p.name ASC'; }
-
-        $stmt = tryQuery($pdo, $sql_fb2, $params);
-        if ($stmt) { $sql = $sql_fb2; }
-    }
-
-    // Fallback 3: quitar joins de subcategoría si la tabla no existe
-    if (!$stmt) {
-        $sql_fb3 = preg_replace('/\s+(LEFT|INNER)\s+JOIN\s+subcategories\s+sc\s+ON\s+(vp|p)\.subcategory_id\s*=\s*sc\.id\s*/i', ' ', $sql);
-        $stmt = tryQuery($pdo, $sql_fb3, $params);
-        if ($stmt) { $sql = $sql_fb3; }
-    }
-
-    // Fallback 4: lista básica sin condiciones ni parámetros
-    if (!$stmt) {
-        $sql_fb4 = "SELECT p.*, COALESCE(
-                        (SELECT pi1.path FROM product_images pi1 WHERE pi1.product_id = p.id AND pi1.is_cover = 1 ORDER BY pi1.sort_order ASC, pi1.id ASC LIMIT 1),
-                        (SELECT pi2.path FROM product_images pi2 WHERE pi2.product_id = p.id ORDER BY pi2.sort_order ASC, pi2.id ASC LIMIT 1)
-                    ) AS cover_image
-                    FROM products p ";
-        if ($sort === 'newest') { $sql_fb4 .= ' ORDER BY p.created_at DESC, p.id DESC'; }
-        elseif ($sort === 'price_asc') { $sql_fb4 .= ' ORDER BY p.price ASC, p.id ASC'; }
-        elseif ($sort === 'price_desc') { $sql_fb4 .= ' ORDER BY p.price DESC, p.id DESC'; }
-        else { $sql_fb4 .= ' ORDER BY p.name ASC'; }
-        $sql_fb4 .= ' LIMIT 200';
-        $stmt = tryQuery($pdo, $sql_fb4, []);
-        if ($stmt) { $sql = $sql_fb4; $params = []; }
-    }
-
-    if (!$stmt) {
-        throw new Exception('No se pudo ejecutar la consulta de productos (estructura de tabla inesperada).');
-    }
+    // --- Ejecutar Consulta ---
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
 
     // --- Procesar Resultados ---
-    if ($productId !== null) {
-        // Si buscamos por ID, esperamos un solo resultado
+    if ($productId) {
         $product = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$product) {
             http_response_code(404);
-            echo json_encode(['success' => false, 'message' => 'Producto no encontrado o inactivo']);
+            echo json_encode(['success' => false, 'message' => 'Producto no encontrado o inactivo.']);
         } else {
-            // Añadir imágenes de galería y colores, si existen
-            try {
-                $imgsStmt = $pdo->prepare("SELECT id, path, is_cover, sort_order FROM product_images WHERE product_id = :pid ORDER BY is_cover DESC, sort_order ASC, id ASC");
-                $imgsStmt->execute([':pid' => $productId]);
-                $images = $imgsStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
-            } catch (Throwable $t) {
-                $images = [];
-            }
+            // Obtener imágenes y colores adicionales para la vista de detalle
+            $imgsStmt = $pdo->prepare("SELECT id, path, is_cover, sort_order FROM product_images WHERE product_id = :pid ORDER BY is_cover DESC, sort_order ASC, id ASC");
+            $imgsStmt->execute([':pid' => $productId]);
+            $images = $imgsStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
-            try {
-                $colorsStmt = $pdo->prepare("SELECT id, name, hex FROM product_colors WHERE product_id = :pid ORDER BY id ASC");
-                $colorsStmt->execute([':pid' => $productId]);
-                $colors = $colorsStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
-            } catch (Throwable $t) {
-                $colors = [];
-            }
-
-            // Si falta category_name, intentar mapearlo desde categories
-            try {
-                if ((empty($product['category_name']) || $product['category_name'] === null) && !empty($product['category_id'])) {
-                    $catStmt = $pdo->prepare('SELECT name FROM categories WHERE id = :id LIMIT 1');
-                    $catStmt->execute([':id' => (int)$product['category_id']]);
-                    $catRow = $catStmt->fetch(PDO::FETCH_ASSOC);
-                    if ($catRow && isset($catRow['name'])) {
-                        $product['category_name'] = $catRow['name'];
-                    }
-                }
-            } catch (Throwable $t) {
-                error_log('[get_products] Failed to map category_name for single product: ' . $t->getMessage());
-            }
+            $colorsStmt = $pdo->prepare("SELECT id, name, hex FROM product_colors WHERE product_id = :pid ORDER BY id ASC");
+            $colorsStmt->execute([':pid' => $productId]);
+            $colors = $colorsStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
             echo json_encode(['success' => true, 'data' => $product, 'images' => $images, 'colors' => $colors]);
         }
     } else {
-        // Si buscamos por categoría/subcategoría o todos, esperamos una lista
         $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        // Asegurarnos de que cada producto tenga `category_name` cuando sea posible.
-        try {
-            // Recolectar category_id únicos que no tengan category_name
-            $missingCatIds = [];
-            foreach ($products as $p) {
-                if ((empty($p['category_name']) || $p['category_name'] === null) && !empty($p['category_id'])) {
-                    $missingCatIds[] = (int)$p['category_id'];
-                }
-            }
-            $missingCatIds = array_values(array_unique($missingCatIds));
-            if (!empty($missingCatIds)) {
-                $placeholders = implode(',', array_fill(0, count($missingCatIds), '?'));
-                $catsStmt = $pdo->prepare("SELECT id, name FROM categories WHERE id IN ($placeholders)");
-                $catsStmt->execute($missingCatIds);
-                $cats = $catsStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
-                $catMap = [];
-                foreach ($cats as $c) { $catMap[(int)$c['id']] = $c['name']; }
-                // Rellenar category_name en productos
-                foreach ($products as &$p) {
-                    if ((empty($p['category_name']) || $p['category_name'] === null) && !empty($p['category_id'])) {
-                        $cid = (int)$p['category_id'];
-                        $p['category_name'] = $catMap[$cid] ?? null;
-                    }
-                }
-                unset($p);
-            }
-        } catch (Throwable $t) {
-            // Si falla el mapeo, no queremos romper la respuesta; simplemente continuar.
-            error_log('[get_products] No se pudo mapear category_name: ' . $t->getMessage());
-        }
-
         echo json_encode(['success' => true, 'data' => $products]);
     }
 
 } catch (PDOException $e) {
     http_response_code(500);
-    error_log('Database Error in get_products.php: ' . $e->getMessage() . " SQL: " . ($sql ?? 'N/A') . " Params: " . json_encode($params ?? []));
+    error_log('Database Error in get_products.php: ' . $e->getMessage() . " | SQL: " . ($sql ?? 'N/A') . " | Params: " . json_encode($params ?? []));
     $resp = ['success' => false, 'message' => 'Error en la base de datos al obtener productos.'];
     if ($debug) { $resp['debug'] = ['error' => $e->getMessage(), 'sql' => ($sql ?? null), 'params' => ($params ?? null)]; }
     echo json_encode($resp);
@@ -293,5 +134,5 @@ try {
     if ($debug) { $resp['debug'] = ['error' => $e->getMessage(), 'sql' => ($sql ?? null), 'params' => ($params ?? null)]; }
     echo json_encode($resp);
 }
-exit(); // Terminar script explícitamente
+exit();
 ?>

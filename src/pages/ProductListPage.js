@@ -1,6 +1,6 @@
 // src/pages/ProductListPage.js
 import React, { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useLocation } from 'react-router-dom';
 import ProductCard from '../components/ProductCard';
 import { backendUrl } from '../config/api';
 import './ProductListPage.css';
@@ -13,6 +13,7 @@ function ProductListPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchParams] = useSearchParams();
+  const location = useLocation();
 
   // Soportar parámetros iniciales opcionales
   const categoryParam = searchParams.get('category_id') || searchParams.get('category') || '';
@@ -31,18 +32,22 @@ function ProductListPage() {
       if (qs) apiUrl += `?${qs}`;
 
       try {
-        const response = await fetch(apiUrl);
+        // Log para depuración: URL y parámetros usados para solicitar productos
+        console.log('fetchProducts -> apiUrl:', apiUrl, 'selectedCategoryId:', selectedCategoryId, 'sort:', sort);
+        const response = await fetch(apiUrl, {
+          credentials: 'include'
+        });
         if (!response.ok) {
           throw new Error(`Error HTTP: ${response.status} ${response.statusText}`);
         }
         const data = await response.json();
 
-        if (data.success && Array.isArray(data.data)) {
+        if (data && data.success && Array.isArray(data.data)) {
           console.log("Datos recibidos, actualizando estado:", data.data); // Log justo antes de setProducts
           // 2. Actualiza el estado con los productos recibidos
           setProducts(data.data);
         } else {
-          console.error('API no exitosa o formato incorrecto:', data.message || data);
+          console.error('API no exitosa o formato incorrecto:', data);
           setError(data.message || 'No se pudieron cargar los productos.');
           setProducts([]);
         }
@@ -66,15 +71,42 @@ function ProductListPage() {
         const resp = await fetch(backendUrl('get_categories.php'));
         const cats = await resp.json();
         if (Array.isArray(cats)) {
-          setCategories(cats);
+          // Ocultar la categoría de fallback "FALTA CATEGORIA" para usuarios no admin
+          // Log para depuración: ver qué categorías vienen del backend
+          console.log('Categorias recibidas del backend:', cats);
+          const isAdminRoute = location && location.pathname && String(location.pathname).startsWith('/admin');
+          // Para evitar que un valor en localStorage contamine la vista pública,
+          // basamos la visibilidad del fallback solo en la ruta (admin vs público).
+          const isAdmin = isAdminRoute;
+          const filtered = cats.filter(cat => {
+            if (!cat || !cat.name) return false;
+            const nameNorm = String(cat.name).trim().toUpperCase();
+            const isFallback = nameNorm === 'FALTA CATEGORIA' || nameNorm === 'FALTA CATEGORÍA';
+            return isAdmin ? true : !isFallback;
+          });
+          console.log('Categorias filtradas (visibles):', filtered);
+          setCategories(filtered);
           // Si viene un category_id/category por query, configurarlo una vez
           if (categoryParam) {
             // Si es numérico, úsalo; si es nombre, intenta buscar su id
             if (!isNaN(Number(categoryParam))) {
-              setSelectedCategoryId(String(categoryParam));
+              // Si el parámetro es un ID numérico, solo seleccionarlo si está en las categorías visibles
+              const idStr = String(Number(categoryParam));
+              const existsVisible = filtered.some(fc => String(fc.id) === idStr);
+              if (existsVisible) setSelectedCategoryId(idStr);
             } else {
-              const match = cats.find(c => c.name === categoryParam);
-              if (match) setSelectedCategoryId(String(match.id));
+              // Buscar por nombre en el listado original
+              const match = cats.find(c => String(c.name) === String(categoryParam));
+              if (match) {
+                const nameNorm = String(match.name).trim().toUpperCase();
+                const isFallback = nameNorm === 'FALTA CATEGORIA' || nameNorm === 'FALTA CATEGORÍA';
+                // Solo seleccionar la categoría fallback si estamos en ruta admin
+                if (!isFallback || isAdminRoute) {
+                  // Además, asegurar que la categoría está visible en el listado filtrado
+                  const existsVisible = filtered.some(fc => String(fc.id) === String(match.id));
+                  if (existsVisible) setSelectedCategoryId(String(match.id));
+                }
+              }
             }
           }
           if (sortParam) setSort(sortParam);
@@ -83,12 +115,32 @@ function ProductListPage() {
     };
     fetchCategories();
     // Solo necesitamos correr esto cuando cambie el query param en la URL
-  }, [categoryParam, sortParam]);
+  }, [categoryParam, sortParam, location]);
+
+  // Si las categorías visibles cambian y la categoría seleccionada ya no está en la lista,
+  // limpiar la selección (evita que quede seleccionada una categoría de fallback oculta)
+  useEffect(() => {
+    if (selectedCategoryId && categories.length > 0) {
+      const exists = categories.some(c => String(c.id) === String(selectedCategoryId));
+      if (!exists) setSelectedCategoryId('');
+    }
+  }, [categories, selectedCategoryId]);
 
   const pageTitle = 'Productos';
 
   // Log para depurar el estado en cada renderizado
-  console.log("Renderizando - isLoading:", isLoading, "error:", error, "products.length:", products.length);
+  console.log(
+    "Renderizando - isLoading:",
+    isLoading,
+    "error:",
+    error,
+    "products.length:",
+    products.length,
+    'selectedCategoryId:',
+    selectedCategoryId,
+    'categories:',
+    categories
+  );
 
   return (
     <div className="product-list-page-container">
@@ -99,7 +151,11 @@ function ProductListPage() {
         <select
           className="form-select"
           value={selectedCategoryId}
-          onChange={(e) => setSelectedCategoryId(e.target.value)}
+          onChange={(e) => {
+            const newValue = e.target.value;
+            console.log('Select categoría cambió a:', newValue);
+            setSelectedCategoryId(newValue);
+          }}
         >
           <option value="">Todas las categorías</option>
           {categories.map((c) => (
