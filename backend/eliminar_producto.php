@@ -63,34 +63,65 @@ if (!$productId || !filter_var($productId, FILTER_VALIDATE_INT) || (int)$product
 $productId = (int)$productId;
 
 try {
-    // 1. (Opcional) Obtener la ruta de la imagen antes de eliminar
-    $imgStmt = $pdo->prepare("SELECT main_image FROM products WHERE id = :id");
-    $imgStmt->execute([':id' => $productId]);
-    $imagePath = $imgStmt->fetchColumn(); // Obtiene solo la primera columna de la fila
+    // Obtener datos del producto para la notificación ANTES de borrar
+    $productName = null; $productModel = null;
+    try {
+        $pstmt = $pdo->prepare("SELECT name, model FROM products WHERE id = :id");
+        $pstmt->execute([':id' => $productId]);
+        $prow = $pstmt->fetch(PDO::FETCH_ASSOC);
+        if ($prow) { $productName = $prow['name'] ?? null; $productModel = $prow['model'] ?? null; }
+    } catch (Throwable $t) {
+        error_log("[Delete Info] No se pudieron obtener datos del producto $productId: " . $t->getMessage());
+    }
+    // Recopilar todas las imágenes asociadas desde product_images (portada + galería)
+    $images = [];
+    try {
+        $imgStmt = $pdo->prepare("SELECT path FROM product_images WHERE product_id = :id");
+        $imgStmt->execute([':id' => $productId]);
+        $images = $imgStmt->fetchAll(PDO::FETCH_COLUMN) ?: [];
+    } catch (Throwable $t) {
+        // Si la tabla no existe o falla, continuar igual
+        error_log("[Delete Info] No se pudieron obtener imágenes para el producto $productId: " . $t->getMessage());
+        $images = [];
+    }
 
-    // 2. Preparar la sentencia de eliminación (¡Usando sentencia preparada!)
+    // Eliminar primero dependencias para evitar restricciones de FK
+    try {
+        // product_images
+        $pdo->prepare("DELETE FROM product_images WHERE product_id = :id")->execute([':id' => $productId]);
+    } catch (Throwable $t) {
+        error_log("[Delete Info] No se pudieron eliminar imágenes de DB para producto $productId: " . $t->getMessage());
+    }
+    try {
+        // product_colors (si existe)
+        $pdo->prepare("DELETE FROM product_colors WHERE product_id = :id")->execute([':id' => $productId]);
+    } catch (Throwable $t) {
+        // Silencioso si la tabla no existe
+    }
+
+    // 2. Preparar y ejecutar la eliminación del producto
     $stmt = $pdo->prepare("DELETE FROM products WHERE id = :id");
-
-    // 3. Ejecutar la eliminación, pasando el ID de forma segura
     $stmt->execute([':id' => $productId]);
 
-    // 4. Verificar si se eliminó alguna fila
+    // 3. Verificar si se eliminó alguna fila
     if ($stmt->rowCount() > 0) {
-        // Si se eliminó, intentar borrar el archivo de imagen asociado
-        // Asegúrate que la ruta en $imagePath sea correcta relativa a este script
-        if ($imagePath && file_exists($imagePath)) {
-            @unlink($imagePath); // Usar @ para suprimir errores si no se puede borrar
-            error_log("Imagen eliminada (o intento): " . $imagePath); // Log opcional
-        } else if ($imagePath) {
-            error_log("Advertencia: Imagen no encontrada para borrar en ruta: " . $imagePath);
+        // Borrar archivos de imágenes del disco después de eliminar en DB
+        foreach ($images as $relPath) {
+            if (!$relPath) continue;
+            $absPath = (strpos($relPath, __DIR__) === 0) ? $relPath : __DIR__ . '/' . ltrim($relPath, '/');
+            if (is_file($absPath)) {
+                @unlink($absPath);
+            }
         }
 
         // Opcional: Añadir notificación
         try {
             $notificationSql = "INSERT INTO notifications (message, type, created_at) VALUES (:message, :type, NOW())";
             $notificationStmt = $pdo->prepare($notificationSql);
+            $msg = "Producto" . ($productName ? " '" . $productName . "'" : "") . " (ID: $productId) eliminado.";
+            if ($productModel) { $msg .= " | Modelo: " . $productModel; }
             $notificationStmt->execute([
-                'message' => "Producto (ID: $productId) eliminado.",
+                'message' => $msg,
                 'type' => 'warning' // o 'danger'
             ]);
         } catch (PDOException $e) {

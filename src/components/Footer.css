@@ -13,6 +13,20 @@
   gap: 2rem;
 }
 
+.footer-inicio {
+  max-width: 80%;
+  height: auto;
+  display: block;
+  opacity: 0.75; /* subtle */
+  filter: grayscale(10%);
+}
+
+.footer-bottom-logo {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 0.5rem;
+}
+
 .footer-section {
   flex: 1 1 250px; /* Distribute space evenly */
   min-width: 250px;
@@ -74,4 +88,5 @@
   .footer-section{
     text-align: center;
   }
+  /* footer image sits in the footer-bottom on small screens; spacing handled by .footer-bottom-logo */
 }

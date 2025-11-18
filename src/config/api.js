@@ -16,6 +16,10 @@ export function mediaUrl(relativePath) {
   const str = String(relativePath);
   if (/^https?:\/\//i.test(str)) return str;
   const clean = str.replace(/^\/+/, '');
+  // Si viene de product_images (guardado como 'uploads/archivo.ext' dentro de backend)
+  if (clean.startsWith('uploads/')) {
+    return `${API_BASE}/backend/${clean}`;
+  }
   return `${API_BASE}/${clean}`;
 }
 // Note: Cloudflare Pages/Netlify no ejecutan PHP, configura REACT_APP_API_BASE

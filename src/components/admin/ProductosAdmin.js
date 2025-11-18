@@ -1,7 +1,7 @@
 // src/components/admin/ProductosAdmin.js
 import React, { useState, useEffect } from "react";
 import { formatCLP } from '../../utils/formatters';
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import './ProductosAdmin.css'; // Asegúrate de tener este archivo CSS
 import { backendUrl, mediaUrl } from '../../config/api';
 
@@ -86,9 +86,6 @@ function ProductosAdmin() {
       <div className="productos-admin-container">
          <div className="productos-header">
             <h2>Lista de Productos</h2>
-            <Link to="/admin/agregar-producto" className="btn-add">
-              Agregar Primer Producto
-            </Link>
          </div>
         <p>No hay productos disponibles para mostrar.</p>
       </div>
@@ -100,9 +97,6 @@ function ProductosAdmin() {
     <div className="productos-admin-container">
       <div className="productos-header">
         <h2>Lista de Productos ({products.length})</h2>
-        <Link to="/admin/agregar-producto" className="btn-add">
-          + Agregar Producto
-        </Link>
       </div>
       <div className="table-responsive">
         <table className="productos-table">
@@ -112,17 +106,18 @@ function ProductosAdmin() {
               <th>Portada</th>
               <th>Nombre</th>
               <th>Modelo</th>
-              <th>Precio</th>
-              <th>Stock</th>
+              <th className="col-category">Categoría</th>
+              <th className="col-price">Precio</th>
+              <th className="col-stock">Stock</th>
               <th>Estado</th>
-              <th>Acciones</th>
+              <th className="col-actions">Acciones</th>
             </tr>
           </thead>
           <tbody>
             {products.map((product) => (
               <tr key={product.id}>
-                <td>{product.id}</td>
-                <td>
+                <td data-label="ID">{product.id}</td>
+                <td data-label="Portada">
                   {product.cover_image ? (
                     <img
                        src={buildImageUrl(product.cover_image)}
@@ -134,10 +129,18 @@ function ProductosAdmin() {
                     <span className="no-image">Sin imagen</span>
                   )}
                 </td>
-                <td>{product.name || 'N/A'}</td>
-                <td>{product.model || 'N/A'}</td>
-                <td>{formatCLP(product.price)}</td>
-                <td>
+                <td data-label="Nombre">{product.name || 'N/A'}</td>
+                <td data-label="Modelo">{product.model || 'N/A'}</td>
+                <td className="col-category" data-label="Categoría">
+                  {(() => {
+                    const name = product.category_name || null;
+                    const isMissing = name && name.toUpperCase() === 'FALTA CATEGORIA';
+                    const display = name || (product.category_id ? `#${product.category_id}` : 'N/A');
+                    return <span className={`category-badge ${isMissing ? 'missing' : ''}`}>{display}</span>;
+                  })()}
+                </td>
+                <td className="col-price" data-label="Precio">{formatCLP(product.price)}</td>
+                <td className="col-stock" data-label="Stock">
                   {(() => {
                     const status = product?.stock_status
                       ? (product.stock_status === 'en_stock' ? 'En stock' : 'Por encargo')
@@ -145,12 +148,12 @@ function ProductosAdmin() {
                     return status;
                   })()}
                 </td>
-                 <td>
+                 <td data-label="Estado">
                    <span className={`status ${product.is_active === 1 || product.is_active === '1' ? 'status-active' : 'status-inactive'}`}>
                      {product.is_active === 1 || product.is_active === '1' ? 'Activo' : 'Inactivo'}
                    </span>
                  </td>
-                <td className="actions">
+                <td className="actions" data-label="Acciones">
                   {/* --- CORRECCIÓN AQUÍ --- */}
                   <button
                     onClick={() => navigate(`/admin/editar-producto/${product.id}`)} // Cambiado a 'editar-producto'

@@ -10,6 +10,9 @@ ini_set('log_errors', 1); // Asegúrate de que los errores se registren
 
 session_start();
 
+// Permitir modo debug manual por GET (solo en entorno dev)
+$debug = isset($_GET['debug']) && ($_GET['debug'] === '1' || $_GET['debug'] === 'true');
+
 // --- Configuración CORS ---
 if (isset($_SERVER['HTTP_ORIGIN'])) {
     $allowed_origins = ['http://localhost:3000', 'http://localhost:3003', 'http://localhost:3004'];
@@ -52,10 +55,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 
     try {
         // 1. Obtener datos del producto (ajustado a nuevo esquema)
-        $stmt = $pdo->prepare("SELECT id, name, model, category_id, subcategory_id, price, stock_status, includes_note, video_url, is_active
-                               FROM products WHERE id = :id");
-        $stmt->execute([':id' => $productId]);
-        $product = $stmt->fetch(PDO::FETCH_ASSOC);
+        // Intentar SELECT que incluya subcategory_id; si la columna no existe, hacer fallback sin ella
+        try {
+            $stmt = $pdo->prepare("SELECT id, name, model, category_id, subcategory_id, price, stock_status, includes_note, video_url, is_active
+                                   FROM products WHERE id = :id");
+            $stmt->execute([':id' => $productId]);
+            $product = $stmt->fetch(PDO::FETCH_ASSOC);
+        } catch (PDOException $pe) {
+            // Si la excepción indica columna desconocida, volver a intentar sin subcategory_id
+            error_log('[GET Info] Fallback product query due to DB error: ' . $pe->getMessage());
+            $stmt = $pdo->prepare("SELECT id, name, model, category_id, price, stock_status, includes_note, video_url, is_active
+                                   FROM products WHERE id = :id");
+            $stmt->execute([':id' => $productId]);
+            $product = $stmt->fetch(PDO::FETCH_ASSOC);
+            // Asegurar clave subcategory_id para compatibilidad con frontend
+            if ($product !== false && !array_key_exists('subcategory_id', $product)) {
+                $product['subcategory_id'] = null;
+            }
+        }
 
         if (!$product) {
             http_response_code(404);
@@ -89,11 +106,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $images = $imgsStmt->fetchAll(PDO::FETCH_ASSOC);
 
         // 2. Obtener todas las categorías (sin jerarquía parent_id)
-        $catStmt = $pdo->query("SELECT id, name FROM categories ORDER BY name");
-        if (!$catStmt) {
-            throw new PDOException("Error crítico al obtener categorías.");
+        // Evitar lanzar excepción crítica: si falla la consulta, registrar y devolver array vacío
+        try {
+            $catStmt = $pdo->query("SELECT id, name FROM categories ORDER BY name");
+            $categories = $catStmt ? $catStmt->fetchAll(PDO::FETCH_ASSOC) : [];
+        } catch (Throwable $t) {
+            error_log('[GET Info] Error al obtener categorías: ' . $t->getMessage());
+            $categories = [];
         }
-        $categories = $catStmt->fetchAll(PDO::FETCH_ASSOC);
 
         // 3. Obtener subcategorías si existe la tabla y si hay category_id
         $subcategories = [];
@@ -120,10 +140,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             'images' => $images
         ]);
 
-    } catch (PDOException $e) {
+    } catch (Throwable $e) {
         http_response_code(500);
-        error_log("[GET DB Error] Error fetching product data for ID $productId: " . $e->getMessage());
-        echo json_encode(['success' => false, 'message' => 'Error interno del servidor al obtener datos del producto.']);
+        error_log("[GET DB Error] Error fetching product data for ID $productId: " . $e->getMessage() . " in " . $e->getFile() . ':' . $e->getLine());
+        $resp = ['success' => false, 'message' => 'Error interno del servidor al obtener datos del producto.'];
+        // Incluir detalles de excepción para facilitar depuración local
+        $resp['debug'] = [
+            'error' => $e->getMessage(),
+            'file' => $e->getFile(),
+            'line' => $e->getLine()
+        ];
+        echo json_encode($resp);
     }
     exit();
 }
@@ -164,12 +191,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // --- Obtener TODOS los datos actuales del producto ANTES de actualizar ---
     $current_product_data = null;
+    // Detectar si existe la columna subcategory_id en la tabla products
+    $hasSubcategoryColumn = false;
     try {
-        $stmt_current = $pdo->prepare("SELECT name, model, category_id, subcategory_id, stock_status, price, is_active, description, includes_note, video_url FROM products WHERE id = :id");
+        $colStmt = $pdo->prepare("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'products' AND COLUMN_NAME = 'subcategory_id'");
+        $colStmt->execute();
+        $hasSubcategoryColumn = ((int)$colStmt->fetchColumn() > 0);
+    } catch (Throwable $t) {
+        $hasSubcategoryColumn = false;
+    }
+
+    try {
+        if ($hasSubcategoryColumn) {
+            $stmt_current = $pdo->prepare("SELECT name, model, category_id, subcategory_id, stock_status, price, is_active, description, includes_note, video_url FROM products WHERE id = :id");
+        } else {
+            // Fallback: tabla sin subcategory_id
+            $stmt_current = $pdo->prepare("SELECT name, model, category_id, stock_status, price, is_active, description, includes_note, video_url FROM products WHERE id = :id");
+        }
         $stmt_current->execute(['id' => $id]);
         $current_product_data = $stmt_current->fetch(PDO::FETCH_ASSOC);
+        if ($current_product_data && !$hasSubcategoryColumn) {
+            // Asegurar clave para compatibilidad
+            $current_product_data['subcategory_id'] = null;
+        }
         if (!$current_product_data) { /* ... (manejo de producto no encontrado) ... */ }
-    } catch (PDOException $e) { /* ... (manejo de error DB) ... */ }
+    } catch (Throwable $e) {
+        error_log('[POST DB Error] Error fetching current product data: ' . $e->getMessage());
+        // continuar y dejar que la validación falle más adelante
+        $current_product_data = null;
+    }
 
     // --- Manejo de Imagen (igual que antes) ---
     $main_image_path = null; // Ya no hay columna main_image en products
@@ -211,28 +261,63 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // --- Actualización en la Base de Datos (igual que antes) ---
     $update_params = [];
     try {
-        $sql_update = "UPDATE products SET
-                    name = :name, model = :model, category_id = :category_id, subcategory_id = :subcategory_id,
-                    stock_status = :stock_status, price = :price,
-                    description = :description, includes_note = :includes_note, video_url = :video_url,
-                    is_active = :is_active, updated_at = NOW()
-                WHERE id = :id";
+        // Construir UPDATE dinámico según si existe subcategory_id
+        if ($hasSubcategoryColumn) {
+            $sql_update = "UPDATE products SET
+                        name = :name, model = :model, category_id = :category_id, subcategory_id = :subcategory_id,
+                        stock_status = :stock_status, price = :price,
+                        description = :description, includes_note = :includes_note, video_url = :video_url,
+                        is_active = :is_active, updated_at = NOW()
+                    WHERE id = :id";
+            $update_params = [
+                ':name' => $name,
+                ':model' => $model ?: null,
+                ':category_id' => $category_id,
+                ':subcategory_id' => $subcategory_id,
+                ':stock_status' => ($stock_option === 'instock' ? 'en_stock' : 'por_encargo'),
+                ':price' => $price,
+                ':description' => ($descripcion !== null ? $descripcion : ($current_product_data['description'] ?? null)),
+                ':includes_note' => ($incluye !== null ? $incluye : ($current_product_data['includes_note'] ?? null)),
+                ':video_url' => ($video_url !== null ? $video_url : ($current_product_data['video_url'] ?? null)),
+                ':is_active' => $is_active,
+                ':id' => $id
+            ];
+        } else {
+            $sql_update = "UPDATE products SET
+                        name = :name, model = :model, category_id = :category_id,
+                        stock_status = :stock_status, price = :price,
+                        description = :description, includes_note = :includes_note, video_url = :video_url,
+                        is_active = :is_active, updated_at = NOW()
+                    WHERE id = :id";
+            $update_params = [
+                ':name' => $name,
+                ':model' => $model ?: null,
+                ':category_id' => $category_id,
+                ':stock_status' => ($stock_option === 'instock' ? 'en_stock' : 'por_encargo'),
+                ':price' => $price,
+                ':description' => ($descripcion !== null ? $descripcion : ($current_product_data['description'] ?? null)),
+                ':includes_note' => ($incluye !== null ? $incluye : ($current_product_data['includes_note'] ?? null)),
+                ':video_url' => ($video_url !== null ? $video_url : ($current_product_data['video_url'] ?? null)),
+                ':is_active' => $is_active,
+                ':id' => $id
+            ];
+        }
         $stmt_update = $pdo->prepare($sql_update);
-        $update_params = [
-            ':name' => $name,
-            ':model' => $model ?: null,
-            ':category_id' => $category_id,
-            ':subcategory_id' => $subcategory_id,
-            ':stock_status' => ($stock_option === 'instock' ? 'en_stock' : 'por_encargo'),
-            ':price' => $price,
-            ':description' => ($descripcion !== null ? $descripcion : $current_product_data['description']),
-            ':includes_note' => ($incluye !== null ? $incluye : $current_product_data['includes_note']),
-            ':video_url' => ($video_url !== null ? $video_url : $current_product_data['video_url']),
-            ':is_active' => $is_active,
-            ':id' => $id
-        ];
         $update_executed = $stmt_update->execute($update_params);
         $rows_affected = $stmt_update->rowCount();
+
+        // Log para depuración: parámetros de update y filas afectadas
+        error_log('[POST Debug] update executed=' . ($update_executed ? '1' : '0') . ' rows=' . $rows_affected . ' params=' . json_encode($update_params));
+
+        // Obtener estado actual del producto después del UPDATE para verificar cambios
+        try {
+            $verifyStmt = $pdo->prepare('SELECT * FROM products WHERE id = :id');
+            $verifyStmt->execute([':id' => $id]);
+            $current_after = $verifyStmt->fetch(PDO::FETCH_ASSOC);
+            error_log('[POST Debug] product after update: ' . json_encode($current_after));
+        } catch (Throwable $t) {
+            error_log('[POST Debug] error fetching product after update: ' . $t->getMessage());
+        }
 
         // Verificar si la actualización fue exitosa o si se actualizó la imagen
         if ($update_executed && ($rows_affected > 0 || $image_updated)) {
@@ -388,7 +473,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
              echo json_encode(['success' => false, 'message' => 'Error al ejecutar la actualización del producto.']);
         }
 
-    } catch (PDOException $e) { /* ... (manejo de error DB principal) ... */ }
+    } catch (Throwable $e) {
+        // Manejo genérico de errores en POST
+        http_response_code(500);
+        error_log('[POST DB Error] Exception in editar_producto.php POST: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
+        $resp = ['success' => false, 'message' => 'Error interno del servidor al actualizar el producto.'];
+        $resp['debug'] = ['error' => $e->getMessage(), 'file' => $e->getFile(), 'line' => $e->getLine()];
+        echo json_encode($resp);
+    }
     exit(); // Terminar después de manejar POST
 }
 

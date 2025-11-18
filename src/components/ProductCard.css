@@ -73,9 +73,8 @@
     line-height: 1.35; /* Ajuste de interlineado */
   }
   
-  /* --- Categoría/Subcategoría (Opcional) --- */
-  .product-card-category,
-  .product-card-subcategory {
+  /* --- Categoría (Opcional) --- */
+  .product-card-category {
     font-size: 0.75rem; /* Más pequeño */
     color: #a0a7b4;
     margin-bottom: 0.4rem;

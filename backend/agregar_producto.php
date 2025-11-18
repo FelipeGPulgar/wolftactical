@@ -151,9 +151,29 @@ $paramsProduct = []; // Define outside try block for logging in catch
 try {
     $pdo->beginTransaction(); // Iniciar transacción
 
-    // Generar slug desde el nombre
-    $slug = strtolower(trim(preg_replace('/[^A-Za-z0-9-]+/', '-', @iconv('UTF-8','ASCII//TRANSLIT',$name)),'-'));
-    if (!$slug) { $slug = strtolower(trim(preg_replace('/\s+/', '-', $name), '-')); }
+    // Generar slug base desde el nombre
+    $slugBase = strtolower(trim(preg_replace('/[^A-Za-z0-9-]+/', '-', @iconv('UTF-8','ASCII//TRANSLIT',$name)),'-'));
+    if (!$slugBase) { $slugBase = strtolower(trim(preg_replace('/\s+/', '-', $name), '-')); }
+
+    // Asegurar slug único (evita choque y necesidad de error para el usuario)
+    $slug = $slugBase;
+    try {
+        $checkStmt = $pdo->prepare('SELECT COUNT(*) FROM products WHERE slug = :slug');
+        $suffix = 2;
+        while (true) {
+            $checkStmt->execute([':slug' => $slug]);
+            $exists = (int)$checkStmt->fetchColumn();
+            if ($exists === 0) { break; }
+            $slug = $slugBase . '-' . $suffix;
+            $suffix++;
+            if ($suffix > 1000) { // Protección contra bucle excesivo
+                throw new Exception('No se pudo generar un slug único.');
+            }
+        }
+    } catch (Throwable $t) {
+        // Si falla la verificación, continuar con el slug base (podrá caer en restricción única si existe)
+        error_log('[Slug Unique Fallback] ' . $t->getMessage());
+    }
 
     // Mapear estado de stock
     $stock_status = ($stock_option === 'instock') ? 'en_stock' : 'por_encargo';
@@ -261,15 +281,15 @@ try {
     if ($pdo->inTransaction()) {
         $pdo->rollBack();
     }
-    http_response_code(500);
-    // Log the detailed error including parameters <-- ¡ESTA LÍNEA GUARDA EL ERROR DETALLADO!
+    // Log detallado
     error_log("Error DB al agregar producto: " . $e->getMessage() . " - Code: " . $e->getCode() . " - Params: " . json_encode($paramsProduct));
-    // Provide a more user-friendly message
-    if ($e->getCode() == 23000) { // Violación de restricción (ej. slug único)
+    // Determinar código HTTP
+    if ($e->getCode() == 23000) { // Restricción única (conflicto)
+        http_response_code(409); // Conflict
         echo json_encode(['success' => false, 'message' => 'Error: Ya existe un producto con el mismo slug o nombre.']);
     } else {
-         // Mensaje genérico que estás viendo
-         echo json_encode(['success' => false, 'message' => 'Error en la base de datos al agregar el producto. Verifique los datos o contacte al administrador.']);
+        http_response_code(500);
+        echo json_encode(['success' => false, 'message' => 'Error en la base de datos al agregar el producto. Verifique los datos o contacte al administrador.']);
     }
 } catch (Exception $e) {
     // Catch other general errors (like potential file move failures if you throw exceptions)

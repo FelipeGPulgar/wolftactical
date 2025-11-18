@@ -188,20 +188,28 @@ function EditarProducto() {
   // --- Eliminar categoría seleccionada ---
   const handleDeleteCategory = async () => {
     if (!formData.main_category) return;
+    const categoryId = Number(formData.main_category);
+    if (!Number.isInteger(categoryId) || categoryId <= 0) {
+      console.error('handleDeleteCategory: category_id inválido', formData.main_category);
+      setError('Categoría seleccionada inválida.');
+      return;
+    }
     if (!window.confirm('¿Eliminar la categoría seleccionada?')) return;
     try {
       const response = await fetch(backendUrl('delete_category.php'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ category_id: formData.main_category })
+        body: JSON.stringify({ category_id: categoryId })
       });
-      const data = await response.json();
+      const text = await response.text();
+      let data;
+      try { data = JSON.parse(text); } catch(e) { data = { success:false, message: text }; }
       if (!response.ok || !data.success) {
         throw new Error(data.message || `Error HTTP ${response.status}`);
       }
       // Quitar de la lista y limpiar selección
-      setCategories((prev) => prev.filter(c => c.id !== Number(formData.main_category)));
+      setCategories((prev) => prev.filter(c => Number(c.id) !== categoryId));
       setFormData((prev) => ({ ...prev, main_category: '', subcategory: '' }));
     } catch (err) {
       console.error('Error eliminando categoría:', err);

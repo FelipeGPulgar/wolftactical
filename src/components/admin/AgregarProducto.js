@@ -26,6 +26,9 @@ function AgregarProducto() {
   // Subcategorías deshabilitadas
   const [imagePreview, setImagePreview] = useState(null); // Vista previa solo para imagen principal
   const [additionalImages, setAdditionalImages] = useState([]); // Galería de imágenes adicionales
+  const [additionalPreviews, setAdditionalPreviews] = useState([]); // Previews galería
+  const [previewImage1, setPreviewImage1] = useState(null);
+  const [previewImage2, setPreviewImage2] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null); // Para mostrar errores en la UI
   const [colors, setColors] = useState([]); // Array to manage colors
@@ -101,6 +104,18 @@ function AgregarProducto() {
       reader.readAsDataURL(file);
     } else if (name === 'main_image' && !file) {
       setImagePreview(null); // Limpia la vista previa si se cancela la selección
+    } else if (name === 'image_1') {
+      if (file) {
+        const r = new FileReader();
+        r.onloadend = () => setPreviewImage1(r.result);
+        r.readAsDataURL(file);
+      } else { setPreviewImage1(null); }
+    } else if (name === 'image_2') {
+      if (file) {
+        const r2 = new FileReader();
+        r2.onloadend = () => setPreviewImage2(r2.result);
+        r2.readAsDataURL(file);
+      } else { setPreviewImage2(null); }
     }
   };
 
@@ -108,6 +123,9 @@ function AgregarProducto() {
   const handleAdditionalImagesChange = (e) => {
     const files = Array.from(e.target.files || []);
     setAdditionalImages(files);
+    // Generar previews
+    const previews = files.map(file => ({ name: file.name, url: URL.createObjectURL(file) }));
+    setAdditionalPreviews(previews);
   };
 
   // Add a new color
@@ -137,6 +155,7 @@ function AgregarProducto() {
           method: 'POST',
           body: JSON.stringify({ name: newCategory }),
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
         });
         const data = await response.json();
         if (data.success) {
@@ -159,8 +178,12 @@ function AgregarProducto() {
           method: 'POST',
           body: JSON.stringify({ category_id: categoryId }),
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
         });
         const data = await response.json();
+        if (response.status === 401) {
+          throw new Error('No autorizado');
+        }
         if (data.success) {
           setCategories(categories.filter((category) => category.id !== categoryId));
         } else {
@@ -206,45 +229,34 @@ function AgregarProducto() {
     try {
       const response = await fetch(backendUrl('agregar_producto.php'), {
         method: 'POST',
-        credentials: 'include', // Enviar cookies (importante para la sesión PHP)
+        credentials: 'include',
         body: formDataToSend
       });
 
-      // Clonar la respuesta para poder leerla potencialmente dos veces (JSON y texto)
-      const clonedResponse = response.clone();
-
-      // Intentar parsear como JSON primero
+      let data;
       try {
-        const data = await response.json();
-        console.log("Respuesta JSON recibida:", data);
-
-        // Verificar si la respuesta de red fue OK (status 2xx) Y si el backend indica éxito
-        if (!response.ok || !data.success) {
-          // Si no fue OK o success es false, lanzar error con mensaje del backend o genérico
-          throw new Error(data.message || `Error ${response.status}: ${response.statusText}`);
-        }
-
-        // Si todo fue bien
-        alert('Producto agregado con éxito');
-        navigate('/admin/productos'); // Redirigir a la lista de productos
-
-      } catch (jsonError) {
-        // Si falló el parseo JSON (probablemente error 500 con HTML o texto plano)
-        console.error("Error al parsear JSON:", jsonError);
-        // Intentar leer la respuesta como texto
-        const text = await clonedResponse.text();
-        console.error("Respuesta como texto:", text);
-        // Lanzar un error más informativo incluyendo parte del texto recibido
-        throw new Error(`Error inesperado del servidor (${response.status}). Respuesta: ${text.substring(0, 200)}...`);
+        data = await response.json();
+        console.log('Respuesta JSON recibida:', data);
+      } catch (parseErr) {
+        const rawText = await response.text();
+        throw new Error(`Respuesta inválida del servidor (${response.status}). Texto: ${rawText.substring(0,200)}...`);
       }
 
-    } catch (error) {
-      // Captura cualquier error (de red, lanzado desde el try, etc.)
-      console.error('Error en handleSubmit:', error);
-      setError(error.message || 'Ocurrió un error inesperado.'); // Establecer mensaje de error para la UI
-      // Ya no usamos alert aquí, el error se muestra en el div {error && ...}
+      if (!response.ok || !data.success) {
+        // Mostrar mensaje del backend (ej: slug duplicado) sin tratarlo como fallo de parseo
+        setError(data.message || `Error ${response.status}`);
+        setIsLoading(false);
+        return;
+      }
+
+      alert('Producto agregado con éxito');
+      navigate('/admin/productos');
+
+    } catch (err) {
+      console.error('Error en handleSubmit:', err);
+      setError(err.message || 'Ocurrió un error inesperado.');
     } finally {
-      setIsLoading(false); // Ocultar indicador de carga
+      setIsLoading(false);
     }
   };
 
@@ -372,7 +384,7 @@ function AgregarProducto() {
             name="main_image"
             className="form-control" // Usar clase consistente
             onChange={handleFileChange}
-            accept="image/*" // Aceptar cualquier tipo de imagen
+            accept="image/jpeg,image/png,image/gif,image/webp" // Extensiones explícitas (incluye webp)
             required // La imagen principal es requerida
           />
           {/* Muestra la vista previa si existe */}
@@ -388,8 +400,9 @@ function AgregarProducto() {
             name="image_1"
             className="form-control"
             onChange={handleFileChange}
-            accept="image/*"
+            accept="image/jpeg,image/png,image/gif,image/webp"
           />
+          {previewImage1 && <img src={previewImage1} alt="Adicional 1" style={{marginTop:'0.5rem', maxWidth:'160px', border:'1px solid #ccc', borderRadius:'4px'}} />}
           {/* Podrías añadir vistas previas para estas también si lo deseas */}
         </div>
 
@@ -402,8 +415,9 @@ function AgregarProducto() {
             name="image_2"
             className="form-control"
             onChange={handleFileChange}
-            accept="image/*"
+            accept="image/jpeg,image/png,image/gif,image/webp"
           />
+          {previewImage2 && <img src={previewImage2} alt="Adicional 2" style={{marginTop:'0.5rem', maxWidth:'160px', border:'1px solid #ccc', borderRadius:'4px'}} />}
         </div>
 
         {/* Galería de Imágenes (múltiples) */}
@@ -415,10 +429,20 @@ function AgregarProducto() {
             name="additional_images"
             className="form-control"
             onChange={handleAdditionalImagesChange}
-            accept="image/*"
+            accept="image/jpeg,image/png,image/gif,image/webp"
             multiple
           />
           <small>Se permite subir varias imágenes (hasta 20 en total por producto).</small>
+          {additionalPreviews.length > 0 && (
+            <div style={{display:'flex',flexWrap:'wrap',gap:'8px',marginTop:'0.75rem'}}>
+              {additionalPreviews.map(p => (
+                <div key={p.name} style={{position:'relative'}}>
+                  <img src={p.url} alt={p.name} style={{width:'100px',height:'100px',objectFit:'cover',borderRadius:'4px',border:'1px solid #ccc'}} />
+                  <div style={{fontSize:'0.6rem',maxWidth:'100px',overflow:'hidden',textOverflow:'ellipsis'}}>{p.name}</div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Description */}

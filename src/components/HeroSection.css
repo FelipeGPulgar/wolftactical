@@ -84,7 +84,7 @@
 /* Media Queries for Responsiveness */
 @media (max-width: 1200px) {
   .hero-container {
-    justify-content: flex-start; /* Align items to the start on smaller screens */
+    justify-content: center; /* Keep items centered on smaller screens */
   }
 }
 @media (max-width: 768px) {

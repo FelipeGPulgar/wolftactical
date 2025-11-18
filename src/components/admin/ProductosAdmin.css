@@ -12,7 +12,7 @@
   --transition: all 0.2s ease-in-out; /* Ejemplo */
 }
 
-.products-header {
+.productos-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -20,43 +20,55 @@
 }
 
 .table-responsive {
-  overflow-x: auto; /* Permite scroll horizontal en pantallas pequeñas si la tabla es muy ancha */
-}
-
-.products-table {
+  overflow-x: auto; /* Scroll horizontal solo cuando sea necesario (mobile) */
   width: 100%;
-  background: white;
+}
+@media (min-width: 1024px) {
+  .table-responsive {
+    overflow-x: hidden; /* En desktop, desactiva scroll horizontal */
+    padding-right: 12px; /* Evita que el último botón se vea cortado */
+  }
+}
+/* Evita que el contenedor de admin agregue scroll horizontal en desktop */
+.productos-admin-container { overflow-x: hidden; }
+
+.productos-table {
+  width: 100%; /* Ocupa el ancho completo del contenedor */
+  background: transparent; /* Match tema oscuro del admin */
   border-radius: var(--border-radius);
-  box-shadow: var(--box-shadow);
+  box-shadow: none;
   overflow: hidden; /* Para que el border-radius funcione en las esquinas */
   border-collapse: collapse; /* Colapsa los bordes de las celdas */
-  min-width: 600px; /* Ancho mínimo para evitar que se comprima demasiado */
+  min-width: 100%; /* Ancho completo */
+  table-layout: auto; /* Deja que el navegador calcule los anchos y alinee bien */
 }
 
-.products-table thead {
-  background-color: var(--primary-color);
-  color: white;
+.productos-table thead {
+  background-color: transparent; /* Sin franja azul, usar tema del admin */
+  color: inherit; /* Usa el color del contenedor (claro sobre fondo oscuro) */
 }
 
-.products-table th {
+.productos-table th {
   padding: 1rem;
   text-align: left;
   font-weight: 500;
-  white-space: nowrap; /* Evita que los títulos se partan */
+  white-space: normal; /* Permite que los títulos se partan si es necesario */
 }
 
-.products-table td {
+.productos-table td {
   padding: 0.75rem 1rem; /* Ajuste ligero del padding */
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
   vertical-align: middle; /* Alinea verticalmente el contenido */
+  white-space: normal; /* Permite que el contenido se ajuste y no genere scroll */
+  text-align: left;
 }
 
-.products-table tr:last-child td {
+.productos-table tr:last-child td {
   border-bottom: none;
 }
 
-.products-table tr:hover {
-  background-color: #f8f9fa;
+.productos-table tr:hover {
+  background-color: rgba(255,255,255,0.05);
 }
 
 /* Estilos para la miniatura de la imagen */
@@ -77,8 +89,8 @@
   align-items: center;
   width: 60px;           /* Mismo tamaño que la imagen */
   height: 60px;
-  background-color: #f0f0f0; /* Fondo gris claro */
-  color: #aaa;          /* Color de texto gris */
+  background-color: #2a2d34; /* Fondo gris oscuro acorde al tema */
+  color: #9aa0a6;          /* Color de texto gris claro */
   font-size: 0.7rem;     /* Tamaño de fuente pequeño */
   border-radius: 4px;    /* Mismos bordes redondeados */
   text-align: center;
@@ -88,8 +100,18 @@
 /* Estilos para la celda de acciones */
 .actions {
   display: flex;
-  gap: 0.5rem;
-  flex-wrap: wrap; /* Permite que los botones pasen a la siguiente línea si no caben */
+  gap: 0.75rem;
+  flex-wrap: nowrap; /* Mantener en una sola línea */
+  align-items: center;
+  justify-content: flex-start;
+  min-width: 0; /* Permite que use el ancho asignado a la columna */
+}
+
+/* Evita que el contenido del td se parta en varias líneas */
+.productos-table td.actions {
+  white-space: nowrap;
+  padding: 0.5rem 0.75rem 0.5rem 0.5rem; /* Colchón derecho para que no se vea cortado */
+  border-bottom-color: transparent; /* Evita línea visible debajo de los botones */
 }
 
 /* Estilos para los botones de acción (ejemplo) */
@@ -101,6 +123,9 @@
   font-size: 0.85rem;
   transition: var(--transition);
   white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  height: 38px; /* Altura uniforme para ambos botones */
 }
 
 .btn-edit {
@@ -137,6 +162,151 @@
 .status-inactive {
   background-color: rgba(108, 117, 125, 0.15); /* Gris */
   color: #5a6268; /* Gris oscuro */
+}
+
+/* Badge para categoría */
+.category-badge {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  background: #eef2ff;
+  color: #1f3a8a;
+  white-space: nowrap; /* No cortar "Chalecos Tácticos" */
+}
+.category-badge.missing {
+  background: rgba(220,53,69,0.12);
+  color: #dc3545;
+  font-weight: 600;
+}
+
+/* Mantener Categoría y Stock en una sola línea y alineadas */
+.productos-table th.col-category,
+.productos-table td.col-category,
+.productos-table th.col-stock,
+.productos-table td.col-stock {
+  white-space: nowrap;
+}
+
+/* Alinear precios a la derecha para facilitar lectura */
+.productos-table th.col-price,
+.productos-table td.col-price {
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* Anchos sugeridos para evitar overflow en desktop */
+.productos-table th:nth-child(1),
+.productos-table td:nth-child(1) { width: 56px; }
+.productos-table th:nth-child(2),
+.productos-table td:nth-child(2) { width: 96px; }
+
+/* Dar más espacio horizontal a Nombre y Modelo para que se alarguen en filas */
+.productos-table th:nth-child(3),
+.productos-table td:nth-child(3) { width: 36%; }
+.productos-table th:nth-child(4),
+.productos-table td:nth-child(4) { width: 18%; }
+
+/* Columna Acciones: ancho fijo y alineación consistente */
+.productos-table th.col-actions,
+.productos-table td.actions { width: 300px; }
+
+/* Responsivo: ajustar columnas y botones en pantallas más pequeñas */
+@media (max-width: 1024px) {
+  .productos-table th.col-actions,
+  .productos-table td.actions { width: 200px; }
+  .actions { gap: 0.75rem; }
+}
+@media (max-width: 768px) {
+  .productos-table th.col-actions,
+  .productos-table td.actions { width: 160px; }
+  .actions { gap: 0.5rem; flex-wrap: nowrap; justify-content: space-between; width: 100%; }
+  .btn-edit, .btn-delete { height: 34px; padding: 0.35rem 0.6rem; font-size: 0.8rem; flex: 1 1 auto; }
+}
+
+/* En móviles permitir que Categoría y Stock también se ajusten */
+@media (max-width: 640px) {
+  .productos-table th.col-category,
+  .productos-table td.col-category,
+  .productos-table th.col-stock,
+  .productos-table td.col-stock { white-space: normal; }
+}
+
+/* ========== Tabla apilada en móviles ========== */
+@media (max-width: 768px) {
+  .productos-table thead { display: none; }
+
+  .productos-table,
+  .productos-table tbody,
+  .productos-table tr,
+  .productos-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .productos-table tr {
+    margin-bottom: 0.85rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    background: rgba(255,255,255,0.03);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  .productos-table td {
+    display: grid;
+    grid-template-columns: 120px 1fr; /* Etiqueta – Valor */
+    gap: 0.5rem 0.75rem;
+    align-items: center;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    padding: 0.6rem 0.9rem;
+  }
+
+  .productos-table td:last-child { border-bottom: none; }
+
+  .productos-table td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: #aab2c5;
+    text-transform: none;
+    letter-spacing: 0.2px;
+  }
+
+  .product-thumbnail, .no-image {
+    width: 56px;
+    height: 56px;
+  }
+
+  .productos-table td.col-price {
+    text-align: right;
+  }
+
+  .productos-table td.actions {
+    padding: 0.75rem 0.9rem;
+    border-bottom-color: transparent;
+    display: flex;                /* Usar flex en lugar de grid para acciones */
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: 0.5rem;
+  }
+  .productos-table td.actions::before {
+    flex: 0 0 120px;              /* Ancho fijo para la etiqueta "Acciones" */
+    margin-right: 0.25rem;
+  }
+  .productos-table td.actions > button {
+    flex: 1 1 0;                  /* Ambos botones comparten el espacio */
+    min-width: 0;
+  }
+
+  /* Ocultar campos menos críticos en móvil para simplificar */
+  .productos-table td[data-label="ID"] { display: none; }
+
+  /* Portada centrada visualmente */
+  .productos-table td[data-label="Portada"] { align-items: center; }
+
+  /* Acciones: dos botones a lo ancho, sin flotar */
+  .productos-table td.actions .actions { display: flex; gap: 0.5rem; width: 100%; }
+  .productos-table td.actions .btn-edit,
+  .productos-table td.actions .btn-delete { flex: 1 1 0; min-width: 0; }
 }
 
 

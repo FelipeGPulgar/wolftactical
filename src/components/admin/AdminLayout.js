@@ -28,20 +28,20 @@ function AdminLayout({ children }) {
   return (
     <div className="admin-layout">
       <aside className="admin-sidebar">
-        <h2>Panel de Administración</h2>
+        <h2 className="admin-brand">Panel de Administración</h2>
         <nav>
-          <ul>
-            <li>
+          <ul className="admin-nav">
+            <li className="admin-nav-item">
               <Link to="/admin/productos" className="admin-nav-link">
                 <i className="fas fa-boxes"></i> Productos
               </Link>
             </li>
-            <li>
+            <li className="admin-nav-item">
               <Link to="/admin/agregar-producto" className="admin-nav-link">
                 <i className="fas fa-plus-circle"></i> Agregar Producto
               </Link>
             </li>
-            <li>
+            <li className="admin-nav-item admin-logout">
               <button onClick={handleLogout} className="admin-logout-btn">
                 <i className="fas fa-sign-out-alt"></i> Cerrar Sesión
               </button>

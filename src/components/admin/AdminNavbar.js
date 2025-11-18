@@ -17,6 +17,10 @@ const AdminNavbar = () => {
       const response = await fetch(backendUrl('notificaciones.php'), {
         credentials: 'include',
       });
+      if (response.status === 401) { // No autorizado: probablemente sesión expirada
+        setNotifications([]);
+        return; // Silenciar error visible
+      }
       if (!response.ok) {
         let errorMessage = `Error ${response.status}: ${response.statusText}`;
         try { const errorData = await response.json(); errorMessage = errorData.message || errorMessage; } catch (e) { /* Ignorar */ }

@@ -1,6 +1,7 @@
 import React from "react";
 import "./Footer.css";
 import { SITE, formatPhoneE164 } from "../config/site";
+import FooterInicio from "../Images/Footer-Inicio.png";
 
 function Footer() {
   const year = new Date().getFullYear();
@@ -49,6 +50,11 @@ function Footer() {
         </div>
       </div>
       <div className="footer-bottom">
+        <div className="footer-bottom-logo">
+          <a href="/" aria-label="Inicio">
+            <img src={FooterInicio} alt="Inicio" className="footer-inicio" />
+          </a>
+        </div>
         <p>&copy; {year} {SITE.name}. Todos los derechos reservados.</p>
       </div>
     </footer>

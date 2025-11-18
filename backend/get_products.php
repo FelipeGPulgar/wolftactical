@@ -227,12 +227,56 @@ try {
                 $colors = [];
             }
 
+            // Si falta category_name, intentar mapearlo desde categories
+            try {
+                if ((empty($product['category_name']) || $product['category_name'] === null) && !empty($product['category_id'])) {
+                    $catStmt = $pdo->prepare('SELECT name FROM categories WHERE id = :id LIMIT 1');
+                    $catStmt->execute([':id' => (int)$product['category_id']]);
+                    $catRow = $catStmt->fetch(PDO::FETCH_ASSOC);
+                    if ($catRow && isset($catRow['name'])) {
+                        $product['category_name'] = $catRow['name'];
+                    }
+                }
+            } catch (Throwable $t) {
+                error_log('[get_products] Failed to map category_name for single product: ' . $t->getMessage());
+            }
+
             echo json_encode(['success' => true, 'data' => $product, 'images' => $images, 'colors' => $colors]);
         }
     } else {
         // Si buscamos por categoría/subcategoría o todos, esperamos una lista
         $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        // Aquí podrías iterar sobre $products para añadir imágenes adicionales si es necesario
+        // Asegurarnos de que cada producto tenga `category_name` cuando sea posible.
+        try {
+            // Recolectar category_id únicos que no tengan category_name
+            $missingCatIds = [];
+            foreach ($products as $p) {
+                if ((empty($p['category_name']) || $p['category_name'] === null) && !empty($p['category_id'])) {
+                    $missingCatIds[] = (int)$p['category_id'];
+                }
+            }
+            $missingCatIds = array_values(array_unique($missingCatIds));
+            if (!empty($missingCatIds)) {
+                $placeholders = implode(',', array_fill(0, count($missingCatIds), '?'));
+                $catsStmt = $pdo->prepare("SELECT id, name FROM categories WHERE id IN ($placeholders)");
+                $catsStmt->execute($missingCatIds);
+                $cats = $catsStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+                $catMap = [];
+                foreach ($cats as $c) { $catMap[(int)$c['id']] = $c['name']; }
+                // Rellenar category_name en productos
+                foreach ($products as &$p) {
+                    if ((empty($p['category_name']) || $p['category_name'] === null) && !empty($p['category_id'])) {
+                        $cid = (int)$p['category_id'];
+                        $p['category_name'] = $catMap[$cid] ?? null;
+                    }
+                }
+                unset($p);
+            }
+        } catch (Throwable $t) {
+            // Si falla el mapeo, no queremos romper la respuesta; simplemente continuar.
+            error_log('[get_products] No se pudo mapear category_name: ' . $t->getMessage());
+        }
+
         echo json_encode(['success' => true, 'data' => $products]);
     }
 

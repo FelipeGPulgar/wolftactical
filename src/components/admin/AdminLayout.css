@@ -2,39 +2,37 @@
 .admin-layout {
     display: flex;
     min-height: calc(100vh - 120px);
+    overflow-x: hidden; /* Evita scroll horizontal global en layout */
   }
   
   .admin-sidebar {
-    width: 280px;
+    width: 200px;
     color: white;
-    padding: 2rem 1rem;
+    padding: 1.5rem 1rem;
     position: relative;
     z-index: 10;
   }
   
   .admin-brand {
-    font-size: 1.5rem;
+    font-size: 1.25rem;
     font-weight: 600;
-    margin-bottom: 2rem;
+    margin-bottom: 1.5rem;
     padding: 0 1rem;
     display: flex;
     align-items: center;
     gap: 0.75rem;
   }
   
-  .admin-nav {
-    list-style: none;
-  }
+  .admin-nav { list-style: none; padding: 0; margin: 0; }
   
-  .admin-nav-item {
-    margin-bottom: 0.5rem;
-  }
+  .admin-nav-item { margin-bottom: 0.25rem; }
   
   .admin-nav-link {
     display: flex;
     align-items: center;
     gap: 0.75rem;
-    padding: 0.75rem 1rem;
+    padding: 0.6rem 0.9rem;
+    font-size: 0.95rem;
     color: rgba(255, 255, 255, 0.8);
     text-decoration: none;
     border-radius: var(--border-radius);
@@ -57,15 +55,12 @@
   
   .admin-content {
     flex: 1;
-    padding: 2rem;
+    padding: 1.1rem 1.5rem 1.4rem 0.75rem; /* acercar más al sidebar */
+    min-width: 0;            /* Evita overflow de hijos en contenedor flex */
+    overflow-x: hidden;      /* Bloquea scroll horizontal dentro del área de contenido */
   }
   
-  .admin-logout {
-    position: absolute;
-    bottom: 2rem;
-    left: 1rem;
-    right: 1rem;
-  }
+  .admin-logout { position: absolute; bottom: 1.25rem; left: 1rem; right: 1rem; }
   
   .admin-logout-btn {
     width: 100%;
@@ -83,4 +78,16 @@
   
   .admin-logout-btn:hover {
     background: rgba(255, 255, 255, 0.2);
+  }
+
+  /* Responsive: sidebar más estrecha para ganar contenido */
+  @media (max-width: 1280px) {
+    .admin-sidebar { width: 210px; }
+    .admin-brand { font-size: 1.15rem; }
+  }
+  @media (max-width: 1024px) {
+    .admin-sidebar { width: 190px; padding: 1.25rem 0.75rem; }
+    .admin-brand { font-size: 1.05rem; margin-bottom: 1rem; }
+    .admin-nav-link { font-size: 0.9rem; padding: 0.55rem 0.8rem; }
+    .admin-content { padding: 1rem 1.25rem; }
   }

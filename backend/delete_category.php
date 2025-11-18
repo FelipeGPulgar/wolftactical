@@ -9,6 +9,7 @@ if (isset($_SERVER['HTTP_ORIGIN'])) {
 }
 header("Access-Control-Allow-Methods: POST, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type, Authorization");
+header('Content-Type: application/json');
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
@@ -16,7 +17,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 // Incluir la conexión a la base de datos
+session_start();
 require_once 'db.php';
+
+// Verificar sesión de admin
+if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true) {
+    http_response_code(401);
+    echo json_encode(['success' => false, 'message' => 'No autorizado']);
+    exit();
+}
 
 // Verificar si los datos se enviaron correctamente
 $data = json_decode(file_get_contents("php://input"), true);
@@ -43,6 +52,42 @@ try {
         exit();
     }
 
+    // Verificar si hay productos usando esta categoría
+    $countStmt = $pdo->prepare("SELECT COUNT(*) FROM products WHERE category_id = :id");
+    $countStmt->execute([':id' => $category_id]);
+    $inUse = (int)$countStmt->fetchColumn();
+    $reassigned = 0;
+    if ($inUse > 0) {
+        // Buscar o crear categoría de fallback "FALTA CATEGORIA"
+        $fallbackName = 'FALTA CATEGORIA';
+        $pdo->beginTransaction();
+        try {
+            $check = $pdo->prepare('SELECT id FROM categories WHERE name = :name LIMIT 1');
+            $check->execute([':name' => $fallbackName]);
+            $fallbackId = $check->fetchColumn();
+            if (!$fallbackId) {
+                // Generar slug para cumplir con esquema
+                $slug = strtolower(trim(preg_replace('/[^A-Za-z0-9-]+/', '-', @iconv('UTF-8','ASCII//TRANSLIT',$fallbackName)),'-'));
+                if (!$slug) { $slug = 'falta-categoria'; }
+                $ins = $pdo->prepare('INSERT INTO categories (name, slug) VALUES (:name, :slug)');
+                $ins->execute([':name' => $fallbackName, ':slug' => $slug]);
+                $fallbackId = $pdo->lastInsertId();
+            }
+
+            // Reasignar productos a la categoría fallback
+            $upd = $pdo->prepare('UPDATE products SET category_id = :fallback WHERE category_id = :old');
+            $upd->execute([':fallback' => $fallbackId, ':old' => $category_id]);
+            $reassigned = $upd->rowCount();
+            $pdo->commit();
+        } catch (Throwable $t) {
+            $pdo->rollBack();
+            error_log('[delete_category] Error al crear/reasignar a fallback: ' . $t->getMessage());
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => 'No se pudo reasignar productos a la categoría de fallback.']);
+            exit();
+        }
+    }
+
     // Eliminar las subcategorías asociadas (nuevo esquema en tabla subcategories)
     try {
         $stmtSub = $pdo->prepare("DELETE FROM subcategories WHERE category_id = :category_id");
@@ -60,7 +105,15 @@ try {
 
     if ($stmt->rowCount() > 0) {
         error_log("Categoría eliminada correctamente: ID " . $category_id);
-        echo json_encode(['success' => true, 'message' => 'Categoría eliminada correctamente.']);
+        // Notificación opcional
+        try {
+            $notificationSql = "INSERT INTO notifications (message, type, created_at) VALUES (:message, :type, NOW())";
+            $notificationStmt = $pdo->prepare($notificationSql);
+            $notifMsg = 'Categoría ID ' . $category_id . ' eliminada. Productos reasignados: ' . $reassigned;
+            $notificationStmt->execute([':message' => $notifMsg, ':type' => 'warning']);
+        } catch (Throwable $t) { /* noop */ }
+
+        echo json_encode(['success' => true, 'message' => 'Categoría eliminada. Productos reasignados: ' . $reassigned]);
     } else {
         error_log("Error: No se pudo eliminar la categoría: ID " . $category_id);
         http_response_code(500); // Internal Server Error
