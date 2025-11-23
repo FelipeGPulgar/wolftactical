@@ -1,7 +1,7 @@
 // src/config/api.js
 // Centraliza la base del backend para que no quede fija a localhost
 
-const rawBase = process.env.REACT_APP_API_BASE || 'http://localhost/wolftactical';
+const rawBase = process.env.REACT_APP_API_BASE || 'http://localhost/wolfftactical';
 export const API_BASE = rawBase.replace(/\/$/, '');
 
 // Construye URLs a scripts PHP bajo /backend
@@ -23,4 +23,4 @@ export function mediaUrl(relativePath) {
   return `${API_BASE}/${clean}`;
 }
 // Note: Cloudflare Pages/Netlify no ejecutan PHP, configura REACT_APP_API_BASE
-// con la URL pública donde vive tu backend PHP (ej: https://api.tu-dominio.com/wolftactical)
+// con la URL pública donde vive tu backend PHP (ej: https://api.tu-dominio.com/wolfftactical)

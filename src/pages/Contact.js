@@ -55,8 +55,7 @@ function Contact() {
         </div>
       </form>
       <div className="quick-contacts">
-        <button className="btn btn-secondary" onClick={()=>sendWhatsApp(SITE.phones.martin)}>WhatsApp Martín</button>
-        <button className="btn btn-secondary" onClick={()=>sendWhatsApp(SITE.phones.sebastian)}>WhatsApp Sebastián</button>
+        <button className="btn btn-secondary" onClick={()=>sendWhatsApp(SITE.phones.sebastian)}>WhatsApp</button>
         <a className="btn" href={`mailto:${SITE.supportEmail}`}>Enviar Email</a>
       </div>
     </div>

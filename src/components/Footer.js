@@ -20,7 +20,7 @@ function Footer() {
         <div className="footer-section">
           <h3>Contactanos</h3>
           <p>Email: {SITE.supportEmail}</p>
-          <p>Sebastián: {formatPhoneE164(SITE.phones.sebastian)}</p>
+          <p>{formatPhoneE164(SITE.phones.sebastian)}</p>
         </div>
         <div className="footer-section">
           <h3>Siguenos En</h3>

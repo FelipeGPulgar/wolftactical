@@ -44,13 +44,8 @@ try {
     }
 
     // --- Construcción de la Consulta SQL ---
-    $sql = "
-        SELECT 
-            p.*,
-            c.name AS category_name
-        FROM products p
-        LEFT JOIN categories c ON p.category_id = c.id
-    ";
+    // Primero obtener productos básicos sin subconsultas (con alias p)
+    $sql = "SELECT * FROM products p";
 
     $conditions = [];
     $params = [];
@@ -105,19 +100,78 @@ try {
             http_response_code(404);
             echo json_encode(['success' => false, 'message' => 'Producto no encontrado o inactivo.']);
         } else {
+            // Agregar cover_image
+            try {
+                $coverStmt = $pdo->prepare("SELECT path FROM product_images WHERE product_id = :pid AND is_cover = 1 LIMIT 1");
+                $coverStmt->execute([':pid' => $productId]);
+                $cover = $coverStmt->fetch(PDO::FETCH_ASSOC);
+                $product['cover_image'] = $cover ? $cover['path'] : null;
+            } catch (PDOException $e) {
+                $product['cover_image'] = null;
+            }
+            
+            // Obtener nombre de categoría si existe
+            $product['category_name'] = null;
+            if ($product['category_id']) {
+                try {
+                    $catStmt = $pdo->prepare("SELECT name FROM categories WHERE id = :cat_id LIMIT 1");
+                    $catStmt->execute([':cat_id' => $product['category_id']]);
+                    $category = $catStmt->fetch(PDO::FETCH_ASSOC);
+                    $product['category_name'] = $category ? $category['name'] : null;
+                } catch (PDOException $e) {
+                    // Silenciar error
+                }
+            }
+            
             // Obtener imágenes y colores adicionales para la vista de detalle
-            $imgsStmt = $pdo->prepare("SELECT id, path, is_cover, sort_order FROM product_images WHERE product_id = :pid ORDER BY is_cover DESC, sort_order ASC, id ASC");
-            $imgsStmt->execute([':pid' => $productId]);
-            $images = $imgsStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            try {
+                $imgsStmt = $pdo->prepare("SELECT id, path, is_cover, sort_order FROM product_images WHERE product_id = :pid ORDER BY is_cover DESC, sort_order ASC, id ASC");
+                $imgsStmt->execute([':pid' => $productId]);
+                $images = $imgsStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            } catch (PDOException $e) {
+                $images = [];
+            }
 
-            $colorsStmt = $pdo->prepare("SELECT id, name, hex FROM product_colors WHERE product_id = :pid ORDER BY id ASC");
-            $colorsStmt->execute([':pid' => $productId]);
-            $colors = $colorsStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            try {
+                $colorsStmt = $pdo->prepare("SELECT id, name, hex FROM product_colors WHERE product_id = :pid ORDER BY id ASC");
+                $colorsStmt->execute([':pid' => $productId]);
+                $colors = $colorsStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            } catch (PDOException $e) {
+                $colors = [];
+            }
 
             echo json_encode(['success' => true, 'data' => $product, 'images' => $images, 'colors' => $colors]);
         }
     } else {
         $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Agregar cover_image y category_name a cada producto
+        foreach ($products as &$product) {
+            // Agregar cover_image
+            try {
+                $coverStmt = $pdo->prepare("SELECT path FROM product_images WHERE product_id = :pid AND is_cover = 1 LIMIT 1");
+                $coverStmt->execute([':pid' => $product['id']]);
+                $cover = $coverStmt->fetch(PDO::FETCH_ASSOC);
+                $product['cover_image'] = $cover ? $cover['path'] : null;
+            } catch (PDOException $e) {
+                $product['cover_image'] = null;
+            }
+            
+            // Agregar category_name
+            $product['category_name'] = null;
+            if ($product['category_id']) {
+                try {
+                    $catStmt = $pdo->prepare("SELECT name FROM categories WHERE id = :cat_id LIMIT 1");
+                    $catStmt->execute([':cat_id' => $product['category_id']]);
+                    $category = $catStmt->fetch(PDO::FETCH_ASSOC);
+                    $product['category_name'] = $category ? $category['name'] : null;
+                } catch (PDOException $e) {
+                    // Silenciar error
+                }
+            }
+        }
+        unset($product); // Liberar referencia
+        
         echo json_encode(['success' => true, 'data' => $products]);
     }
 

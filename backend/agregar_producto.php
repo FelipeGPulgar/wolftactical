@@ -31,6 +31,7 @@ header("Content-Type: application/json");
 
 // --- Conexión DB y Autenticación ---
 require_once 'db.php'; // Usa la conexión PDO ($pdo)
+require_once 'image_utils.php'; // Funciones para procesamiento de imágenes
 
 // Verifica la sesión DESPUÉS de incluir db.php
 if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true) {
@@ -125,15 +126,15 @@ if (isset($_FILES['main_image']) && $_FILES['main_image']['error'] === UPLOAD_ER
          die(json_encode(['success' => false, 'message' => 'Archivo principal no es una imagen válida o tipo no permitido.']));
     }
 
-    // Mover archivo
-    $new_filename = uniqid('prod_') . '.' . $imageFileType;
-    $target_file_absolute = $target_dir_absolute . $new_filename;
-    $main_image_relative_path = $target_dir_relative . $new_filename; // Store the relative path
-    if (!move_uploaded_file($main_image['tmp_name'], $target_file_absolute)) {
-         error_log("Error al mover archivo principal subido a " . $target_file_absolute);
+    // Procesar y convertir a WebP
+    $new_filename_base = uniqid('prod_');
+    $processed = processUploadedImage($main_image, $target_dir_absolute . '/', $new_filename_base);
+    if ($processed === false) {
+         error_log("Error al procesar imagen principal");
          http_response_code(500);
          die(json_encode(['success' => false, 'message' => 'Error al guardar la imagen principal.']));
     }
+    $main_image_relative_path = $target_dir_relative . $processed['path'];
 } elseif (isset($_FILES['main_image']) && $_FILES['main_image']['error'] !== UPLOAD_ERR_NO_FILE) {
     // Handle other upload errors if a file was attempted but failed
     error_log("Error en subida de imagen principal (código: {$_FILES['main_image']['error']})");
@@ -239,15 +240,16 @@ try {
 
     foreach ($additional_images_files as $index => $imageFile) {
         if ($imageFile && $imageFile['error'] === UPLOAD_ERR_OK && !empty($imageFile['tmp_name'])) {
-            // (Validation and saving logic similar to main image)
+            // Validar tipo de imagen
             $add_imageFileType = strtolower(pathinfo($imageFile['name'], PATHINFO_EXTENSION));
             $add_check = @getimagesize($imageFile['tmp_name']);
             if ($add_check && in_array($add_imageFileType, $allowed_extensions)) {
-                $add_new_filename = uniqid('prod_' . $newProductId . '_add' . ($index + 1) . '_') . '.' . $add_imageFileType;
-                $add_target_file_absolute = $target_dir_absolute . $add_new_filename; // Usa la misma carpeta base
-                $add_image_relative_path = $target_dir_relative . $add_new_filename; // Relative path
-
-                if (move_uploaded_file($imageFile['tmp_name'], $add_target_file_absolute)) {
+                // Procesar y convertir a WebP
+                $add_new_filename_base = uniqid('prod_' . $newProductId . '_add' . ($index + 1) . '_');
+                $processed = processUploadedImage($imageFile, $target_dir_absolute . '/', $add_new_filename_base);
+                
+                if ($processed !== false) {
+                    $add_image_relative_path = $target_dir_relative . $processed['path'];
                     // Insert into product_images con sort_order 1, 2...
                     $image_order = $index + 1;
                     $stmtImg->execute([
@@ -258,8 +260,8 @@ try {
                     ]);
                 } else {
                     // Log error but let the transaction potentially fail later if needed
-                    error_log("Error al mover imagen adicional {$index} para producto ID $newProductId a $add_target_file_absolute");
-                    // Optionally: throw new Exception("Failed to move additional image {$index}."); to force rollback
+                    error_log("Error al procesar imagen adicional {$index} para producto ID $newProductId");
+                    // Optionally: throw new Exception("Failed to process additional image {$index}."); to force rollback
                 }
             } else {
                  error_log("Archivo adicional {$index} inválido para producto ID $newProductId (Type: $add_imageFileType, Check: " . ($add_check ? 'OK' : 'Failed') . ")");

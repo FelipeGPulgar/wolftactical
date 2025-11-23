@@ -123,7 +123,16 @@ function ProductosAdmin() {
                        src={buildImageUrl(product.cover_image)}
                        alt={product.name || 'Producto'}
                        className="product-thumbnail"
-                       onError={(e) => { e.target.style.display = 'none'; }} // Oculta si la imagen no carga
+                       onError={(e) => { 
+                         e.target.style.display = 'none';
+                         const parent = e.target.parentNode;
+                         if (!parent.querySelector('.no-image')) {
+                           const placeholder = document.createElement('span');
+                           placeholder.className = 'no-image';
+                           placeholder.textContent = 'Sin imagen';
+                           parent.appendChild(placeholder);
+                         }
+                       }}
                     />
                   ) : (
                     <span className="no-image">Sin imagen</span>

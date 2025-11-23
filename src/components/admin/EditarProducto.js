@@ -104,8 +104,27 @@ function EditarProducto() {
           console.log("[Carga Inicial] URL de imagen actual establecida:", imageUrl || '(Ninguna)');
 
           // Cargar listas de categorías
-          setCategories(data.categories || []);
-          console.log(`[Carga Inicial] Categorías cargadas: ${data.categories?.length || 0}`);
+          // Ocultar la categoría fallback "FALTA CATEGORIA" visualmente, a menos que el producto la tenga
+          const originalCats = Array.isArray(data.categories) ? data.categories : [];
+          const fallbackNameCheck = (n) => {
+            if (!n) return false;
+            const s = String(n).trim().toUpperCase();
+            return s === 'FALTA CATEGORIA' || s === 'FALTA CATEGORÍA';
+          };
+          // Filtrar fuera fallback
+          let visibleCats = originalCats.filter(c => !fallbackNameCheck(c.name));
+          // Si el producto actual tiene la categoría fallback, incluirla (al inicio) para que siga apareciendo
+          if (product && fallbackNameCheck(product.category_name)) {
+            const fallbackCat = originalCats.find(c => fallbackNameCheck(c.name) || Number(c.id) === Number(product.category_id));
+            if (fallbackCat) {
+              // Evitar duplicados
+              if (!visibleCats.some(c => Number(c.id) === Number(fallbackCat.id))) {
+                visibleCats = [fallbackCat, ...visibleCats];
+              }
+            }
+          }
+          setCategories(visibleCats);
+          console.log(`[Carga Inicial] Categorías visibles cargadas: ${visibleCats.length} (original: ${originalCats.length})`);
 
           // Cargar galería completa
               setGallery(Array.isArray(data.images) ? data.images : []);
@@ -311,6 +330,9 @@ function EditarProducto() {
   // Si hay error (incluso durante la carga), se mostrará en el form
 
   // --- Renderizado del Formulario ---
+  // Determinar si la categoría seleccionada es la fallback (para deshabilitar eliminación)
+  const selectedCategoryObj = categories.find(c => String(c.id) === String(formData.main_category));
+  const isSelectedFallback = selectedCategoryObj && (String(selectedCategoryObj.name || '').trim().toUpperCase() === 'FALTA CATEGORIA' || String(selectedCategoryObj.name || '').trim().toUpperCase() === 'FALTA CATEGORÍA');
   return (
     <div className="form-container">
       <h2>Editar Producto (ID: {id})</h2>
@@ -359,7 +381,8 @@ function EditarProducto() {
               type="button"
               style={{ marginTop: '0.5rem' }}
               onClick={handleDeleteCategory}
-              disabled={!formData.main_category}
+              disabled={!formData.main_category || isSelectedFallback}
+              title={isSelectedFallback ? 'No se puede eliminar la categoría de fallback desde aquí' : ''}
             >
               Eliminar categoría seleccionada
             </button>
@@ -370,7 +393,7 @@ function EditarProducto() {
         {/* Opciones de Stock y Cantidad (lado a lado) */}
         <div className="form-group-dual">
            <div className="form-group">
-             <label className="form-label">Opciones de Stock</label>
+             <div className="form-label">Opciones de Stock</div>
              <div className="radio-group">
                <label className="radio-option">
                  <input type="radio" name="stock_option" value="preorder" checked={formData.stock_option === 'preorder'} onChange={handleChange} /> Por encargo
@@ -397,7 +420,7 @@ function EditarProducto() {
 
         {/* Estado (Activo/Inactivo) */}
         <div className="form-group">
-             <label className="form-label">Estado</label>
+             <div className="form-label">Estado</div>
              <div className="checkbox-group">
                <label className="checkbox-option">
                  <input type="checkbox" name="is_active" checked={formData.is_active === 1} onChange={handleChange} /> Activo (visible en la tienda)
@@ -436,7 +459,7 @@ function EditarProducto() {
 
         {/* Galería existente (solo lectura en esta versión) */}
         <div className="form-group">
-          <label className="form-label">Galería Actual</label>
+          <div className="form-label">Galería Actual</div>
           <div className="image-upload-container">
             {gallery.length === 0 && <div style={{color: '#6c757d'}}>No hay imágenes adicionales.</div>}
             {gallery.map((img) => (

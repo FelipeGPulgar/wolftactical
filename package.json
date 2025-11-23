@@ -1,6 +1,7 @@
 {
   "name": "wolftactical",
   "version": "0.1.0",
+  "packageManager": "bun@latest",
   "private": true,
   "dependencies": {
     "@testing-library/dom": "^10.4.0",

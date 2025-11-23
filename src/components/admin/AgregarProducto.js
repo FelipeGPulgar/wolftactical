@@ -44,10 +44,16 @@ function AgregarProducto() {
         if (!response.ok) {
            throw new Error(`Error HTTP al cargar categorías: ${response.status}`);
         }
-        const data = await response.json();
-        // Validar que la respuesta sea un array
-        if (Array.isArray(data)) {
-           setCategories(data);
+          const data = await response.json();
+          // Validar que la respuesta sea un array
+          if (Array.isArray(data)) {
+            // Ocultar categoría fallback "FALTA CATEGORIA" en el formulario de agregar
+            const filtered = data.filter(cat => {
+             if (!cat || !cat.name) return false;
+             const nameNorm = String(cat.name).trim().toUpperCase();
+             return !(nameNorm === 'FALTA CATEGORIA' || nameNorm === 'FALTA CATEGORÍA');
+            });
+            setCategories(filtered);
         } else {
            console.warn("Respuesta inesperada para categorías, se esperaba un array:", data);
            setCategories([]); // Establecer vacío si no es array
@@ -234,13 +240,15 @@ function AgregarProducto() {
       });
 
       let data;
-      try {
-        data = await response.json();
-        console.log('Respuesta JSON recibida:', data);
-      } catch (parseErr) {
+        // Leer siempre el texto crudo primero para poder depurar respuestas no-JSON
         const rawText = await response.text();
-        throw new Error(`Respuesta inválida del servidor (${response.status}). Texto: ${rawText.substring(0,200)}...`);
-      }
+        console.log('Respuesta cruda del servidor (status:', response.status + '):', rawText.slice(0,1000));
+        try {
+          data = JSON.parse(rawText);
+          console.log('Respuesta JSON recibida:', data);
+        } catch (parseErr) {
+          throw new Error(`Respuesta inválida del servidor (${response.status}). Texto: ${rawText.substring(0,200)}...`);
+        }
 
       if (!response.ok || !data.success) {
         // Mostrar mensaje del backend (ej: slug duplicado) sin tratarlo como fallo de parseo
@@ -284,7 +292,7 @@ function AgregarProducto() {
 
         {/* Categoría Principal */}
         <div className="form-group">
-          <label htmlFor="main_category" className="form-label">Categoría Principal</label>
+          <div className="form-label">Categoría Principal</div>
           <div className="category-container">
             {categories.map((category) => (
               <div
@@ -337,7 +345,7 @@ function AgregarProducto() {
 
         {/* Opciones de Stock */}
         <div className="form-group">
-          <label className="form-label">Opciones de Stock</label>
+          <div className="form-label">Opciones de Stock</div>
           <div className="radio-group">
             <label className="radio-option">
               <input type="radio" name="stock_option" value="preorder" checked={formData.stock_option === 'preorder'} onChange={handleChange} />
@@ -468,7 +476,7 @@ function AgregarProducto() {
 
         {/* Colors */}
         <div className="form-group">
-          <label className="form-label">Colores</label>
+          <div className="form-label">Colores</div>
           {colors.map((color, index) => (
             <div key={index} className="color-group" style={{ display: 'flex', alignItems: 'center', marginBottom: '1rem' }}>
               {/* Circular color preview */}

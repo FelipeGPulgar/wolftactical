@@ -31,6 +31,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 // --- Conexión DB y Autenticación ---
 require_once 'db.php'; // Asegúrate que $pdo se define aquí
+require_once 'image_utils.php'; // Funciones para procesamiento de imágenes
 
 // Verifica la sesión DESPUÉS de incluir db.php y ANTES de cualquier salida principal
 if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true) {
@@ -237,10 +238,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $file_extension = strtolower(pathinfo($_FILES['main_image']['name'], PATHINFO_EXTENSION));
         $allowed_extensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
         if (!in_array($mime_type, $allowed_mime_types) || !in_array($file_extension, $allowed_extensions)) { /* ... */ }
-        $new_filename = uniqid('prod_' . $id . '_', true) . '.' . $file_extension;
-        $target_file_absolute = $target_dir_absolute . $new_filename;
-        $new_image_relative_path = $target_dir_relative . $new_filename;
-        if (move_uploaded_file($_FILES['main_image']['tmp_name'], $target_file_absolute)) {
+        
+        // Procesar y convertir a WebP
+        $new_filename_base = uniqid('prod_' . $id . '_', true);
+        $processed = processUploadedImage($_FILES['main_image'], $target_dir_absolute . '/', $new_filename_base);
+        
+        if ($processed !== false) {
+            $new_image_relative_path = $target_dir_relative . $processed['path'];
             // Guardar como portada en product_images (establecer otras portadas a 0)
             try {
                 $pdo->beginTransaction();
@@ -254,7 +258,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $pdo->rollBack();
                 error_log('[Image Update Error] ' . $t->getMessage());
             }
-        } else { /* ... */ }
+        } else {
+            error_log('[Image Process Error] No se pudo procesar la imagen principal');
+        }
     } elseif (isset($_FILES['main_image']) && $_FILES['main_image']['error'] !== UPLOAD_ERR_NO_FILE) { /* ... */ }
 
 
@@ -440,10 +446,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                              $ext = strtolower(pathinfo($multi['name'][$i], PATHINFO_EXTENSION));
                              $check = @getimagesize($multi['tmp_name'][$i]);
                              if ($check && in_array($ext, $allowed_extensions)) {
-                                 $new_filename = uniqid('prod_' . $id . '_add_', true) . '.' . $ext;
-                                 $target_file_absolute = $target_dir_absolute . $new_filename;
-                                 $image_relative_path = $target_dir_relative . $new_filename;
-                                 if (move_uploaded_file($multi['tmp_name'][$i], $target_file_absolute)) {
+                                 // Crear array compatible con processUploadedImage
+                                 $imageFile = [
+                                     'name' => $multi['name'][$i],
+                                     'type' => $multi['type'][$i] ?? null,
+                                     'tmp_name' => $multi['tmp_name'][$i],
+                                     'error' => $multi['error'][$i],
+                                     'size' => $multi['size'][$i] ?? 0
+                                 ];
+                                 
+                                 // Procesar y convertir a WebP
+                                 $new_filename_base = uniqid('prod_' . $id . '_add_', true);
+                                 $processed = processUploadedImage($imageFile, $target_dir_absolute . '/', $new_filename_base);
+                                 
+                                 if ($processed !== false) {
+                                     $image_relative_path = $target_dir_relative . $processed['path'];
                                      $maxSort++;
                                      $stmtImg->execute([
                                          ':product_id' => $id,
@@ -452,6 +469,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                          ':sort_order' => $maxSort
                                      ]);
                                      $added_gallery++;
+                                 } else {
+                                     error_log("Error al procesar imagen adicional {$i} para producto ID $id");
                                  }
                              }
                          }

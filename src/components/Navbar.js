@@ -22,7 +22,7 @@ function Navbar() {
   return (
     <nav className="navbar">
       <Link to="/" className="logo" onClick={closeMenu}> {/* Cierra menú al ir a Home */}
-        WolfTactical
+        wolfftactical
       </Link>
 
       <div className={`menu-icon ${isOpen ? "open" : ""}`} onClick={toggleMenu}>
