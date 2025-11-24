@@ -5,6 +5,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 // Asegúrate de que este CSS exista y tenga los estilos necesarios
 import './AgregarProducto.css'; // Reutilizando estilos
 import { backendUrl, mediaUrl } from '../../config/api';
+import { formatCLP, parseCLPInput } from '../../utils/formatters';
 
 function EditarProducto() {
   console.log("Renderizando EditarProducto..."); // Log inicial
@@ -35,15 +36,17 @@ function EditarProducto() {
   const [isLoading, setIsLoading] = useState(true); // Estado de carga general
   const [error, setError] = useState(null); // Mensaje de error para UI
   const [newCategory, setNewCategory] = useState('');
+  const [colors, setColors] = useState([]); // Colores existentes del producto
+  const [newColors, setNewColors] = useState([]); // Nuevos colores a agregar
 
   // --- Efecto para Cargar Datos Iniciales del Producto ---
   useEffect(() => {
     const parsedId = parseInt(id);
     if (!id || isNaN(parsedId) || parsedId <= 0) {
-        console.error(`[Error Carga Inicial] ID de producto no válido en URL: '${id}'.`);
-        setError(`ID de producto inválido: ${id}`);
-        setIsLoading(false);
-        return; // Detener si el ID no es válido
+      console.error(`[Error Carga Inicial] ID de producto no válido en URL: '${id}'.`);
+      setError(`ID de producto inválido: ${id}`);
+      setIsLoading(false);
+      return; // Detener si el ID no es válido
     }
 
     const fetchData = async () => {
@@ -53,8 +56,8 @@ function EditarProducto() {
 
       try {
         // Llamada GET al backend para obtener los datos
-           const response = await fetch(backendUrl(`editar_producto.php?id=${parsedId}`), {
-             credentials: 'include', // Enviar cookies de sesión
+        const response = await fetch(backendUrl(`editar_producto.php?id=${parsedId}`), {
+          credentials: 'include', // Enviar cookies de sesión
         });
         console.log(`[Carga Inicial] Respuesta recibida, status: ${response.status}`);
 
@@ -64,17 +67,17 @@ function EditarProducto() {
 
         let data;
         try {
-            data = JSON.parse(responseText); // Intentar parsear JSON
+          data = JSON.parse(responseText); // Intentar parsear JSON
         } catch (jsonError) {
-            console.error("[Error Carga Inicial] Fallo al parsear JSON. Status:", response.status, "Error:", jsonError);
-            throw new Error(`Respuesta inesperada del servidor (Status ${response.status}, no es JSON válido): ${responseText.substring(0, 200)}...`);
+          console.error("[Error Carga Inicial] Fallo al parsear JSON. Status:", response.status, "Error:", jsonError);
+          throw new Error(`Respuesta inesperada del servidor (Status ${response.status}, no es JSON válido): ${responseText.substring(0, 200)}...`);
         }
 
         console.log("[Carga Inicial] Datos JSON parseados:", data);
 
         if (!response.ok) {
-           console.error(`[Error Carga Inicial] Respuesta HTTP no OK. Status: ${response.status}`);
-           throw new Error(data?.message || `Error en la solicitud al servidor (HTTP ${response.status})`);
+          console.error(`[Error Carga Inicial] Respuesta HTTP no OK. Status: ${response.status}`);
+          throw new Error(data?.message || `Error en la solicitud al servidor (HTTP ${response.status})`);
         }
 
         // Verificar si el backend indicó éxito y envió los datos
@@ -127,7 +130,12 @@ function EditarProducto() {
           console.log(`[Carga Inicial] Categorías visibles cargadas: ${visibleCats.length} (original: ${originalCats.length})`);
 
           // Cargar galería completa
-              setGallery(Array.isArray(data.images) ? data.images : []);
+          setGallery(Array.isArray(data.images) ? data.images : []);
+
+          // Cargar colores existentes
+          const existingColors = Array.isArray(data.colors) ? data.colors : [];
+          setColors(existingColors);
+          console.log(`[Carga Inicial] Colores cargados: ${existingColors.length}`, existingColors);
 
         } else {
           console.error("[Error Carga Inicial] Respuesta del backend no exitosa o faltan datos. Mensaje:", data?.message);
@@ -150,6 +158,17 @@ function EditarProducto() {
   // --- Manejador de Cambios en Inputs y Selects ---
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
+
+    if (name === 'price') {
+      if (value.trim() === '') {
+        setFormData(prev => ({ ...prev, price: '' }));
+        return;
+      }
+      const numeric = parseCLPInput(value);
+      setFormData(prev => ({ ...prev, price: numeric }));
+      return;
+    }
+
     setFormData(prev => ({
       ...prev,
       // Manejar checkbox (is_active) y otros inputs
@@ -223,7 +242,7 @@ function EditarProducto() {
       });
       const text = await response.text();
       let data;
-      try { data = JSON.parse(text); } catch(e) { data = { success:false, message: text }; }
+      try { data = JSON.parse(text); } catch (e) { data = { success: false, message: text }; }
       if (!response.ok || !data.success) {
         throw new Error(data.message || `Error HTTP ${response.status}`);
       }
@@ -233,6 +252,66 @@ function EditarProducto() {
     } catch (err) {
       console.error('Error eliminando categoría:', err);
       setError(`No se pudo eliminar la categoría: ${err.message}`);
+    }
+  };
+
+  // --- Funciones para gestionar colores ---
+  const handleAddColor = () => {
+    if (newColors.length < 8) {
+      setNewColors([...newColors, { color: '', image: null }]);
+    }
+  };
+
+  const handleColorChange = (index, field, value) => {
+    const updatedColors = [...newColors];
+    updatedColors[index][field] = value;
+    setNewColors(updatedColors);
+  };
+
+  const handleRemoveNewColor = (index) => {
+    setNewColors(newColors.filter((_, i) => i !== index));
+  };
+
+  const handleDeleteExistingColor = async (colorId) => {
+    if (!window.confirm('¿Eliminar este color?')) return;
+    try {
+      const response = await fetch(backendUrl('manage_product_colors.php'), {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ color_id: colorId })
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || `Error HTTP ${response.status}`);
+      }
+      // Quitar del estado local
+      setColors(colors.filter(c => c.id !== colorId));
+    } catch (err) {
+      console.error('Error eliminando color:', err);
+      setError(`No se pudo eliminar el color: ${err.message}`);
+    }
+  };
+
+  // --- Eliminar imagen de galería ---
+  const handleDeleteGalleryImage = async (imageId) => {
+    if (!window.confirm('¿Eliminar esta imagen de la galería?')) return;
+    try {
+      const response = await fetch(backendUrl('delete_gallery_image.php'), {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ image_id: imageId })
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || `Error HTTP ${response.status}`);
+      }
+      // Quitar del estado local
+      setGallery(gallery.filter(img => img.id !== imageId));
+    } catch (err) {
+      console.error('Error eliminando imagen:', err);
+      setError(`No se pudo eliminar la imagen: ${err.message}`);
     }
   };
 
@@ -260,7 +339,7 @@ function EditarProducto() {
         formDataToSend.append(key, value);
       } else if (key === 'subcategory' && value === '') {
         // Asegurarse de enviar subcategoría vacía si se deseleccionó
-         formDataToSend.append(key, '');
+        formDataToSend.append(key, '');
       }
     });
 
@@ -268,6 +347,21 @@ function EditarProducto() {
     if (additionalImages.length > 0) {
       additionalImages.forEach((file) => {
         if (file) formDataToSend.append('additional_images[]', file);
+      });
+    }
+
+    // Adjuntar nuevos colores
+    if (newColors.length > 0) {
+      newColors.forEach((color, index) => {
+        if (color.color) {
+          formDataToSend.append(`new_colors[${index}][hex]`, color.color);
+          formDataToSend.append(`new_colors[${index}][name]`, color.color);
+
+          // Adjuntar imagen del color si existe
+          if (color.image instanceof File) {
+            formDataToSend.append(`new_color_image_${index}`, color.image);
+          }
+        }
       });
     }
 
@@ -290,9 +384,9 @@ function EditarProducto() {
 
       let data;
       try { data = JSON.parse(responseText); } // Intentar parsear
-        catch (jsonError) {
-          throw new Error(`Respuesta inesperada del servidor al actualizar (Status ${response.status}, no es JSON): ${responseText.substring(0, 200)}...`);
-        }
+      catch (jsonError) {
+        throw new Error(`Respuesta inesperada del servidor al actualizar (Status ${response.status}, no es JSON): ${responseText.substring(0, 200)}...`);
+      }
 
       console.log("[Submit] Datos JSON parseados:", data);
 
@@ -337,7 +431,7 @@ function EditarProducto() {
     <div className="form-container">
       <h2>Editar Producto (ID: {id})</h2>
       {/* Mostrar error si existe */}
-      {error && <div className="error-message" style={{color: 'red', marginBottom: '1rem'}}>Error: {error}</div>}
+      {error && <div className="error-message" style={{ color: 'red', marginBottom: '1rem' }}>Error: {error}</div>}
 
       <form onSubmit={handleSubmit} className="product-form">
         {/* Nombre */}
@@ -392,40 +486,51 @@ function EditarProducto() {
 
         {/* Opciones de Stock y Cantidad (lado a lado) */}
         <div className="form-group-dual">
-           <div className="form-group">
-             <div className="form-label">Opciones de Stock</div>
-             <div className="radio-group">
-               <label className="radio-option">
-                 <input type="radio" name="stock_option" value="preorder" checked={formData.stock_option === 'preorder'} onChange={handleChange} /> Por encargo
-               </label>
-               <label className="radio-option">
-                 <input type="radio" name="stock_option" value="instock" checked={formData.stock_option === 'instock'} onChange={handleChange} /> En stock
-               </label>
-             </div>
-           </div>
-           {/* Mostrar cantidad solo si 'En stock' está seleccionado */}
-           {formData.stock_option === 'instock' && (
-             <div className="form-group">
-               <label htmlFor="stock_quantity" className="form-label">Cantidad en Stock</label>
-               <input type="number" id="stock_quantity" name="stock_quantity" className="form-control" value={formData.stock_quantity} onChange={handleChange} min="0" required />
-             </div>
-           )}
+          <div className="form-group">
+            <div className="form-label">Opciones de Stock</div>
+            <div className="radio-group">
+              <label className="radio-option">
+                <input type="radio" name="stock_option" value="preorder" checked={formData.stock_option === 'preorder'} onChange={handleChange} /> Por encargo
+              </label>
+              <label className="radio-option">
+                <input type="radio" name="stock_option" value="instock" checked={formData.stock_option === 'instock'} onChange={handleChange} /> En stock
+              </label>
+            </div>
+          </div>
+          {/* Mostrar cantidad solo si 'En stock' está seleccionado */}
+          {formData.stock_option === 'instock' && (
+            <div className="form-group">
+              <label htmlFor="stock_quantity" className="form-label">Cantidad en Stock</label>
+              <input type="number" id="stock_quantity" name="stock_quantity" className="form-control" value={formData.stock_quantity} onChange={handleChange} min="0" required />
+            </div>
+          )}
         </div>
 
         {/* Precio */}
         <div className="form-group">
           <label htmlFor="price" className="form-label">Precio (CLP)</label>
-          <input type="number" id="price" name="price" className="form-control" value={formData.price} onChange={handleChange} min="0" step="any" required />
+          <input
+            type="text"
+            id="price"
+            name="price"
+            className="form-control"
+            value={formData.price === '' ? '' : formatCLP(formData.price)}
+            onChange={handleChange}
+            required
+            placeholder="$0"
+            inputMode="numeric"
+            autoComplete="off"
+          />
         </div>
 
         {/* Estado (Activo/Inactivo) */}
         <div className="form-group">
-             <div className="form-label">Estado</div>
-             <div className="checkbox-group">
-               <label className="checkbox-option">
-                 <input type="checkbox" name="is_active" checked={formData.is_active === 1} onChange={handleChange} /> Activo (visible en la tienda)
-               </label>
-             </div>
+          <div className="form-label">Estado</div>
+          <div className="checkbox-group">
+            <label className="checkbox-option">
+              <input type="checkbox" name="is_active" checked={formData.is_active === 1} onChange={handleChange} /> Activo (visible en la tienda)
+            </label>
+          </div>
         </div>
 
         {/* Video URL */}
@@ -439,44 +544,68 @@ function EditarProducto() {
           <label htmlFor="main_image" className="form-label">Imagen Principal</label>
           {/* Mostrar vista previa de nueva imagen O imagen actual */}
           {(imagePreview || currentImageUrl) && (
-             <img
-               src={imagePreview || currentImageUrl} // Prioriza la vista previa nueva
-               alt={imagePreview ? "Vista previa nueva imagen" : "Imagen actual"}
-               className="image-upload-preview"
-               style={{ display: 'block', marginBottom: '1rem', maxWidth: '200px', height: 'auto' }}
-             />
+            <img
+              src={imagePreview || currentImageUrl} // Prioriza la vista previa nueva
+              alt={imagePreview ? "Vista previa nueva imagen" : "Imagen actual"}
+              className="image-upload-preview"
+              style={{ display: 'block', marginBottom: '1rem', maxWidth: '200px', height: 'auto' }}
+            />
           )}
           <input
-             type="file"
-             id="main_image"
-             name="main_image"
-             className="form-control"
-             onChange={handleFileChange}
-             accept="image/*" // Aceptar cualquier tipo de imagen
+            type="file"
+            id="main_image"
+            name="main_image"
+            className="form-control"
+            onChange={handleFileChange}
+            accept="image/*" // Aceptar cualquier tipo de imagen
           />
           <small>Selecciona una nueva imagen solo si deseas reemplazar la actual.</small>
         </div>
 
-        {/* Galería existente (solo lectura en esta versión) */}
-        <div className="form-group">
-          <div className="form-label">Galería Actual</div>
-          <div className="image-upload-container">
-            {gallery.length === 0 && <div style={{color: '#6c757d'}}>No hay imágenes adicionales.</div>}
-            {gallery.map((img) => (
-              <div key={img.id} className="image-upload-box">
-                <img
-                  src={mediaUrl(img.path)}
-                  alt={formData.name}
-                  className="image-upload-preview"
-                  style={{ height: '150px' }}
-                />
-                <small>{img.is_cover ? 'Portada' : `Orden: ${img.sort_order}`}</small>
-              </div>
-            ))}
+        {/* Galería de Imágenes Existentes */}
+        {gallery.length > 0 && (
+          <div className="form-group">
+            <div className="form-label">Galería Actual ({gallery.length} imagen(es))</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '1rem', marginTop: '0.5rem' }}>
+              {gallery.map((img) => (
+                <div key={img.id} style={{ position: 'relative', border: '1px solid #ccc', borderRadius: '8px', overflow: 'hidden' }}>
+                  <img
+                    src={mediaUrl(img.path)}
+                    alt="Galería"
+                    style={{ width: '100%', height: '120px', objectFit: 'cover' }}
+                  />
+                  {img.is_cover === 1 && (
+                    <div style={{ position: 'absolute', top: '5px', left: '5px', background: 'rgba(0, 200, 0, 0.8)', color: 'white', padding: '2px 6px', borderRadius: '4px', fontSize: '0.7rem' }}>
+                      Portada
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteGalleryImage(img.id)}
+                    style={{
+                      position: 'absolute',
+                      top: '5px',
+                      right: '5px',
+                      background: 'rgba(255, 0, 0, 0.8)',
+                      border: 'none',
+                      color: 'white',
+                      borderRadius: '50%',
+                      width: '24px',
+                      height: '24px',
+                      cursor: 'pointer',
+                      fontSize: '0.9rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                  >
+                    ✖
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
-
-        {/* Agregar nuevas imágenes a la galería */}
+        )} {/* Agregar nuevas imágenes a la galería */}
         <div className="form-group">
           <label htmlFor="additional_images" className="form-label">Agregar a Galería (puedes seleccionar varias)</label>
           <input
@@ -488,6 +617,115 @@ function EditarProducto() {
             accept="image/*"
             multiple
           />
+        </div>
+
+        {/* Colores Existentes y Nuevos */}
+        <div className="form-group">
+          <div className="form-label">Colores del Producto</div>
+
+          {/* Colores existentes */}
+          {colors.length > 0 && (
+            <div style={{ marginBottom: '1rem' }}>
+              <div style={{ fontSize: '0.9rem', color: '#888', marginBottom: '0.5rem' }}>Colores actuales:</div>
+              <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                {colors.map((color) => (
+                  <div
+                    key={color.id}
+                    style={{
+                      position: 'relative',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: '0.25rem'
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: '50px',
+                        height: '50px',
+                        borderRadius: '50%',
+                        backgroundColor: color.color_hex,
+                        border: '2px solid rgba(255, 255, 255, 0.2)',
+                        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)'
+                      }}
+                      title={color.color_name || color.color_hex}
+                    />
+                    {color.image_path && (
+                      <div style={{ fontSize: '0.7rem', color: '#888' }}>📷</div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteExistingColor(color.id)}
+                      style={{
+                        background: 'rgba(255, 0, 0, 0.7)',
+                        border: 'none',
+                        color: 'white',
+                        borderRadius: '4px',
+                        padding: '2px 6px',
+                        fontSize: '0.7rem',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      ✖
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Nuevos colores */}
+          {newColors.length > 0 && (
+            <div style={{ marginBottom: '1rem' }}>
+              <div style={{ fontSize: '0.9rem', color: '#888', marginBottom: '0.5rem' }}>Nuevos colores:</div>
+              {newColors.map((color, index) => (
+                <div key={index} className="color-group" style={{ display: 'flex', alignItems: 'center', marginBottom: '1rem' }}>
+                  {/* Circular color preview */}
+                  <div
+                    style={{
+                      width: '30px',
+                      height: '30px',
+                      borderRadius: '50%',
+                      backgroundColor: color.color || '#ffffff',
+                      border: '1px solid #ccc',
+                      cursor: 'pointer',
+                      marginRight: '1rem',
+                    }}
+                    onClick={() => document.getElementById(`new-color-picker-${index}`).click()}
+                  ></div>
+
+                  {/* Hidden color picker */}
+                  <input
+                    type="color"
+                    id={`new-color-picker-${index}`}
+                    value={color.color}
+                    style={{ display: 'none' }}
+                    onChange={(e) => handleColorChange(index, 'color', e.target.value)}
+                  />
+
+                  {/* Image upload for the color */}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => handleColorChange(index, 'image', e.target.files[0])}
+                    style={{ marginRight: '1rem' }}
+                  />
+
+                  {/* Remove color button */}
+                  <button type="button" onClick={() => handleRemoveNewColor(index)} className="btn btn-danger">
+                    Eliminar
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Botón agregar color */}
+          {newColors.length < 8 && (
+            <button type="button" onClick={handleAddColor} className="btn btn-primary">
+              Agregar Color
+            </button>
+          )}
         </div>
 
         {/* Botones de Acción */}

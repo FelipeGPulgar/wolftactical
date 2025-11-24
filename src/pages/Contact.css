@@ -7,14 +7,17 @@
   color: #e9ecef;
   border: 1px solid #2f323a;
   border-radius: 10px;
-  box-shadow: 0 12px 24px rgba(0,0,0,0.25);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.25);
 }
 
-.contact-container h2 { margin-top: 0; }
+.contact-container h2 {
+  margin-top: 0;
+}
 
 /* Grid removido: ahora usamos una columna con botones rápidos debajo */
 
-.contact-form .form-control, .contact-form textarea.form-control {
+.contact-form .form-control,
+.contact-form textarea.form-control {
   background: #2a2d34;
   color: #e9ecef;
   border: 1px solid #3a3d45;
@@ -23,10 +26,11 @@
   margin-bottom: 0.75rem;
 }
 
-.contact-form .form-control:focus, .contact-form textarea.form-control:focus {
+.contact-form .form-control:focus,
+.contact-form textarea.form-control:focus {
   outline: none;
   border-color: #4361ee;
-  box-shadow: 0 0 0 0.25rem rgba(67,97,238,0.25);
+  box-shadow: 0 0 0 0.25rem rgba(67, 97, 238, 0.25);
 }
 
 .contact-container .btn {
@@ -38,17 +42,64 @@
   color: #e9ecef;
 }
 
-.contact-container .btn-primary { background: #4361ee; border-color: #4361ee; color:#fff; }
-.contact-container .btn-primary:hover { background:#3f57d8; }
+.contact-container .btn-primary {
+  background: #4361ee;
+  border-color: #4361ee;
+  color: #fff;
+}
 
-.contact-container .btn-secondary { background: #2a2d34; color: #e9ecef; border: 1px solid #3a3d45; }
+.contact-container .btn-primary:hover {
+  background: #3f57d8;
+}
+
+.contact-container .btn-secondary {
+  background: #2a2d34;
+  color: #e9ecef;
+  border: 1px solid #3a3d45;
+}
 
 /* Botones de contacto rápido debajo del formulario */
-.quick-contacts { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.75rem; }
-.quick-contacts .btn { padding: 0.45rem 0.75rem; border-radius: 999px; font-size: 0.9rem; }
+.quick-contacts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.quick-contacts .btn {
+  padding: 0.6rem 1rem;
+  border-radius: 8px;
+  font-size: 1rem;
+}
+
+/* Match standard button style */
 
 /* Asegura flujo vertical correcto del formulario y acciones */
-.contact-form { display: flex; flex-direction: column; }
-.contact-form .form-actions { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #2a2d34; display: flex; justify-content: flex-end; }
+.contact-form {
+  display: flex;
+  flex-direction: column;
+}
 
-/* Responsive: nada especial requerido ahora que es flujo vertical */
+.contact-form .form-actions {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #2a2d34;
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* Responsive: Stack buttons on mobile */
+@media (max-width: 768px) {
+  .quick-contacts {
+    flex-direction: column;
+  }
+
+  .quick-contacts .btn {
+    width: 100%;
+    text-align: center;
+  }
+
+  .contact-form .form-actions .btn {
+    width: 100%;
+  }
+}

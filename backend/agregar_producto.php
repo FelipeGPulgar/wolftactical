@@ -180,10 +180,11 @@ try {
     $stock_status = ($stock_option === 'instock') ? 'en_stock' : 'por_encargo';
 
     // Insertar producto principal (esquema nuevo)
+    // Insertar producto principal (esquema nuevo)
     $sqlInsertProduct = "INSERT INTO products (
-        name, slug, description, price, model, category_id, subcategory_id, stock_status, includes_note, video_url, is_active
+        name, slug, description, price, model, category_id, stock_status, includes_note, video_url, is_active
     ) VALUES (
-        :name, :slug, :description, :price, :model, :category_id, :subcategory_id, :stock_status, :includes_note, :video_url, :is_active
+        :name, :slug, :description, :price, :model, :category_id, :stock_status, :includes_note, :video_url, :is_active
     )";
     $stmtProduct = $pdo->prepare($sqlInsertProduct);
     $paramsProduct = [
@@ -193,7 +194,6 @@ try {
         ':price' => $price,
         ':model' => $model ?: null,
         ':category_id' => $category_id,
-    ':subcategory_id' => null,
         ':stock_status' => $stock_status,
         ':includes_note' => $incluye ?: null,
         ':video_url' => $video_url ?: null,
@@ -272,6 +272,67 @@ try {
         }
     }
 
+    // Insertar Colores (si se enviaron)
+    if (isset($_POST['colors']) && is_array($_POST['colors'])) {
+        $sqlColor = "INSERT INTO product_colors (product_id, color_name, color_hex) VALUES (:product_id, :color_name, :color_hex)";
+        $stmtColor = $pdo->prepare($sqlColor);
+        
+        $sqlColorImage = "INSERT INTO product_color_images (product_color_id, path, alt, sort_order) VALUES (:color_id, :path, :alt, :sort_order)";
+        $stmtColorImage = $pdo->prepare($sqlColorImage);
+        
+        foreach ($_POST['colors'] as $index => $colorData) {
+            // Validar que tenga el campo hex
+            if (isset($colorData['hex']) && !empty($colorData['hex'])) {
+                $colorHex = $colorData['hex'];
+                // Usar el hex como nombre si no se proporciona nombre
+                $colorName = isset($colorData['name']) && !empty($colorData['name']) ? $colorData['name'] : $colorHex;
+                
+                try {
+                    // Insertar el color
+                    $stmtColor->execute([
+                        ':product_id' => $newProductId,
+                        ':color_name' => $colorName,
+                        ':color_hex' => $colorHex
+                    ]);
+                    $colorId = $pdo->lastInsertId();
+                    
+                    // Procesar imagen del color si existe
+                    $imageKey = "color_image_{$index}";
+                    if (isset($_FILES[$imageKey]) && $_FILES[$imageKey]['error'] === UPLOAD_ERR_OK && !empty($_FILES[$imageKey]['tmp_name'])) {
+                        $colorImageFile = $_FILES[$imageKey];
+                        
+                        // Validar tipo de imagen
+                        $colorImageType = strtolower(pathinfo($colorImageFile['name'], PATHINFO_EXTENSION));
+                        $colorCheck = @getimagesize($colorImageFile['tmp_name']);
+                        
+                        if ($colorCheck && in_array($colorImageType, $allowed_extensions)) {
+                            // Procesar y convertir a WebP
+                            $colorImageBase = uniqid('color_' . $newProductId . '_' . $index . '_');
+                            $processedColor = processUploadedImage($colorImageFile, $target_dir_absolute . '/', $colorImageBase);
+                            
+                            if ($processedColor !== false) {
+                                $colorImagePath = $target_dir_relative . $processedColor['path'];
+                                // Insertar en product_color_images
+                                $stmtColorImage->execute([
+                                    ':color_id' => $colorId,
+                                    ':path' => $colorImagePath,
+                                    ':alt' => $name . ' - ' . $colorName,
+                                    ':sort_order' => 0
+                                ]);
+                            } else {
+                                error_log("Error al procesar imagen de color {$index} para producto ID $newProductId");
+                            }
+                        } else {
+                            error_log("Imagen de color {$index} inválida para producto ID $newProductId");
+                        }
+                    }
+                } catch (PDOException $e) {
+                    error_log("Error al insertar color {$index} para producto ID $newProductId: " . $e->getMessage());
+                }
+            }
+        }
+    }
+
     $pdo->commit(); // Confirmar transacción si todo fue bien
 
     // Respuesta exitosa
@@ -291,7 +352,7 @@ try {
         echo json_encode(['success' => false, 'message' => 'Error: Ya existe un producto con el mismo slug o nombre.']);
     } else {
         http_response_code(500);
-        echo json_encode(['success' => false, 'message' => 'Error en la base de datos al agregar el producto. Verifique los datos o contacte al administrador.']);
+        echo json_encode(['success' => false, 'message' => 'Error DB: ' . $e->getMessage()]);
     }
 } catch (Exception $e) {
     // Catch other general errors (like potential file move failures if you throw exceptions)

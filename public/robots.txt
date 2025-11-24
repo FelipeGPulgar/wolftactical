@@ -1,3 +1,9 @@
-# https://www.robotstxt.org/robotstxt.html
-User-agent: *
-Disallow:
+# User-agent: *
+Allow: /
+
+# Disallow admin and backend areas
+Disallow: /admin
+Disallow: /backend/
+
+# Sitemap
+Sitemap: https://wolfftactical.cl/sitemap.xml

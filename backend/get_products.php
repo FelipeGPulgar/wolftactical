@@ -133,7 +133,17 @@ try {
             }
 
             try {
-                $colorsStmt = $pdo->prepare("SELECT id, name, hex FROM product_colors WHERE product_id = :pid ORDER BY id ASC");
+                $colorsStmt = $pdo->prepare("
+                    SELECT 
+                        pc.id, 
+                        pc.color_name, 
+                        pc.color_hex,
+                        pci.path as image_path
+                    FROM product_colors pc
+                    LEFT JOIN product_color_images pci ON pc.id = pci.product_color_id AND pci.sort_order = 0
+                    WHERE pc.product_id = :pid 
+                    ORDER BY pc.id ASC
+                ");
                 $colorsStmt->execute([':pid' => $productId]);
                 $colors = $colorsStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
             } catch (PDOException $e) {

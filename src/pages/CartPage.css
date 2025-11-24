@@ -8,87 +8,280 @@
   color: #e9ecef;
   border: 1px solid #2f323a;
   border-radius: 10px;
-  box-shadow: 0 12px 24px rgba(0,0,0,0.25);
-  font-variant-numeric: tabular-nums; /* Dígitos de ancho fijo para evitar saltos */
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.25);
+  font-variant-numeric: tabular-nums;
 }
 
 .cart-container h2 {
   margin-top: 0;
   color: #e9ecef;
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #2f323a;
 }
 
-/* Ensure generic form-group from admin css doesn't change layout here */
-.cart-container .form-group {
-  display: block;
-  margin-bottom: 1rem;
-}
-
-.cart-container .form-actions {
+/* Cart Items List */
+.cart-items-list {
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.cart-item {
+  display: flex;
   align-items: center;
-  gap: 0.75rem;
-  margin-top: 1.5rem;
-  padding-top: 1rem;
-  border-top: 1px solid #2a2d34;
-}
-
-/* Inputs */
-.cart-container .form-control {
-  background-color: #2a2d34;
-  color: #e9ecef;
-  border: 1px solid #3a3d45;
-  border-radius: 6px;
-}
-.cart-container .form-control:focus {
-  outline: none;
-  border-color: #4361ee;
-  box-shadow: 0 0 0 0.25rem rgba(67,97,238,0.25);
-}
-
-/* Buttons (scoped to cart) */
-.cart-container .btn {
-  padding: 0.65rem 1rem;
-  border-radius: 8px;
-  cursor: pointer;
-  border: 1px solid #3a3d45;
+  justify-content: space-between;
+  padding: 1.5rem;
   background: #2a2d34;
-  color: #e9ecef;
-}
-.cart-container .btn:hover {
-  background: #343843;
+  border-radius: 8px;
+  border: 1px solid #3a3d45;
+  gap: 1.5rem;
 }
 
-.cart-container .btn-primary {
-  background: #4361ee;
-  border-color: #4361ee;
+.cart-item-image {
+  width: 80px;
+  height: 80px;
+  flex-shrink: 0;
+  background: #18191e;
+  border-radius: 6px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cart-item-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.no-image {
+  font-size: 0.7rem;
+  color: #6c757d;
+  text-align: center;
+}
+
+.cart-item-details {
+  flex: 2;
+}
+
+.cart-item-name {
+  font-weight: 600;
+  font-size: 1.1rem;
+  margin-bottom: 0.25rem;
   color: #fff;
 }
-.cart-container .btn-primary:hover {  
-  background: #3f57d8;
-  border-color: #3f57d8;
+
+.cart-item-meta {
+  font-size: 0.9rem;
+  color: #9ca3af;
 }
 
-.cart-container .btn-secondary {
+.cart-item-controls {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  flex: 2;
+  justify-content: center;
+}
+
+.quantity-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.quantity-input {
+  width: 60px;
+  text-align: center;
+  background-color: #18191e !important;
+  border: 1px solid #3a3d45;
+  color: #fff;
+  padding: 0.4rem;
+  border-radius: 4px;
+}
+
+.cart-item-subtotal {
+  font-weight: 700;
+  font-size: 1.1rem;
+  min-width: 100px;
+  text-align: right;
+}
+
+.remove-btn {
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
+  background: rgba(220, 53, 69, 0.1);
+  color: #ff6b6b;
+  border: 1px solid rgba(220, 53, 69, 0.2);
+  transition: all 0.2s;
+}
+
+.remove-btn:hover {
+  background: rgba(220, 53, 69, 0.2);
+  color: #ff4d4d;
+}
+
+/* Cart Actions & Summary */
+.cart-actions-container {
+  margin-top: 2rem;
+  padding-top: 2rem;
+  border-top: 1px solid #3a3d45;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 2rem;
+}
+
+.cart-buttons {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.cart-summary {
   background: #2a2d34;
-  color: #e9ecef;
+  padding: 1.5rem;
+  border-radius: 8px;
+  min-width: 250px;
   border: 1px solid #3a3d45;
 }
 
-/* Right stats block */
-.cart-container .totals-block {
-  text-align: right;
-  min-width: 180px;
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+  color: #9ca3af;
 }
 
-/* Item line separator color tweak */
-.cart-container .item-row {
-  border-bottom: 1px solid #2a2d34;
+.summary-row.total {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #3a3d45;
+  color: #fff;
+  font-size: 1.2rem;
 }
 
-@media (max-width: 640px) {
-  .cart-container .form-actions {
+/* Button Styles */
+.btn {
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s;
+  border: none;
+}
+
+.btn-primary {
+  background: #4f46e5;
+  color: white;
+}
+
+.btn-primary:hover {
+  background: #4338ca;
+}
+
+.btn-secondary {
+  background: #3a3d45;
+  color: #e9ecef;
+}
+
+.btn-secondary:hover {
+  background: #4b5563;
+}
+
+.btn-outline {
+  background: transparent;
+  border: 1px solid #3a3d45;
+  color: #9ca3af;
+}
+
+.btn-outline:hover {
+  border-color: #4b5563;
+  color: #fff;
+}
+
+.btn-whatsapp {
+  background: #25D366;
+  color: white;
+}
+
+.btn-whatsapp:hover {
+  background: #128C7E;
+}
+
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .cart-container {
+    padding: 1rem;
+    margin: 1rem;
+  }
+
+  .cart-item {
     flex-direction: column;
-    align-items: stretch;
+    align-items: center;
+    /* Center everything */
+    text-align: center;
+    /* Center text */
+    gap: 1rem;
+    position: relative;
+    padding-bottom: 4rem;
+    /* Space for remove button */
+  }
+
+  .cart-item-image {
+    width: 120px;
+    /* Larger image on mobile */
+    height: 120px;
+  }
+
+  .cart-item-details {
+    width: 100%;
+  }
+
+  .cart-item-controls {
+    width: 100%;
+    flex-direction: row;
+    /* Keep row but allow wrap if needed, or better yet: */
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+    /* Allow wrapping */
+  }
+
+  .cart-item-subtotal {
+    text-align: right;
+    /* Ensure it doesn't get too squished */
+    white-space: nowrap;
+  }
+
+  .remove-btn {
+    position: absolute;
+    bottom: 1rem;
+    right: 1rem;
+    width: auto;
+  }
+
+  .cart-actions-container {
+    flex-direction: column-reverse;
+    gap: 1.5rem;
+  }
+
+  .cart-buttons {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .cart-buttons .btn {
+    width: 100%;
+    text-align: center;
+  }
+
+  .cart-summary {
+    width: 100%;
+    box-sizing: border-box;
   }
 }

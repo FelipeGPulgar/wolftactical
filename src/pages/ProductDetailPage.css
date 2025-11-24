@@ -1,0 +1,366 @@
+/* ProductDetailPage.css - Liquid Glass Design (Refined) */
+
+.product-detail-container {
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+    border-radius: 16px;
+    /* Slightly smaller radius */
+    padding: 2rem;
+    /* Reduced padding */
+    max-width: 1000px;
+    /* Reduced max-width */
+    margin: 2rem auto;
+    color: #ffffff;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.product-detail-wrapper {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    /* Reduced gap */
+    align-items: start;
+}
+
+@media (max-width: 768px) {
+    .product-detail-wrapper {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .product-detail-container {
+        padding: 1rem;
+        margin: 1rem;
+    }
+
+    .product-detail-wrapper {
+        gap: 1rem;
+    }
+}
+
+/* Color Selector Styles */
+.color-selector {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-top: 0.5rem;
+}
+
+.color-option {
+    position: relative;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+}
+
+.color-option:hover {
+    transform: scale(1.1);
+}
+
+.color-option.selected .color-swatch {
+    border: 3px solid #60a5fa;
+    box-shadow: 0 0 12px rgba(96, 165, 250, 0.6);
+}
+
+.color-swatch {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.color-has-image {
+    position: absolute;
+    bottom: -5px;
+    right: -5px;
+    background: rgba(0, 0, 0, 0.8);
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+/* Image Section */
+.product-images-section {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.main-image-container {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 12px;
+    padding: 0.5rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.2);
+    position: relative;
+    /* For absolute positioning of arrows */
+}
+
+.nav-arrow {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(0, 0, 0, 0.5);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 1.5rem;
+    transition: all 0.2s ease;
+    z-index: 10;
+    user-select: none;
+}
+
+.nav-arrow:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-50%) scale(1.1);
+}
+
+.nav-arrow.prev {
+    left: 10px;
+}
+
+.nav-arrow.next {
+    right: 10px;
+}
+
+.main-image {
+    width: 100%;
+    height: auto;
+    max-height: 350px;
+    /* Reduced max-height */
+    object-fit: contain;
+    border-radius: 8px;
+    transition: transform 0.3s ease;
+}
+
+.main-image:hover {
+    transform: scale(1.02);
+}
+
+.thumbnails-container {
+    display: flex;
+    gap: 0.5rem;
+    overflow-x: auto;
+    padding-bottom: 0.25rem;
+    flex-wrap: wrap;
+    /* Allow wrapping when expanded */
+}
+
+.thumbnail-image {
+    width: 60px;
+    /* Reduced size */
+    height: 60px;
+    object-fit: cover;
+    border-radius: 8px;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: all 0.2s ease;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.thumbnail-image:hover,
+.thumbnail-image.active {
+    border-color: #4a76a8;
+    transform: translateY(-2px);
+}
+
+.thumbnail-more {
+    width: 60px;
+    height: 60px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.2s ease;
+}
+
+.thumbnail-more:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
+}
+
+/* Info Section */
+.product-info-section {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    /* Reduced gap */
+}
+
+.product-title {
+    font-size: 1.8rem;
+    /* Reduced font size */
+    font-weight: 700;
+    margin: 0;
+    background: linear-gradient(90deg, #fff, #a5b4fc);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: -0.5px;
+    line-height: 1.2;
+}
+
+.product-model {
+    color: #9ca3af;
+    font-size: 0.9rem;
+    margin-top: 0.25rem;
+}
+
+.product-price {
+    font-size: 1.5rem;
+    /* Reduced font size */
+    font-weight: 600;
+    color: #4ade80;
+    margin: 0.5rem 0;
+    text-shadow: 0 0 20px rgba(74, 222, 128, 0.3);
+}
+
+.info-group {
+    background: rgba(255, 255, 255, 0.03);
+    padding: 1rem;
+    /* Reduced padding */
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.info-label {
+    display: block;
+    font-size: 0.8rem;
+    /* Reduced font size */
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #94a3b8;
+    margin-bottom: 0.25rem;
+    font-weight: 600;
+}
+
+.info-content {
+    line-height: 1.5;
+    color: #e2e8f0;
+    font-size: 0.95rem;
+}
+
+/* Form Elements */
+.form-control-glass {
+    width: 100%;
+    padding: 0.6rem 0.8rem;
+    /* Reduced padding */
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    color: white;
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+}
+
+.form-control-glass:focus {
+    outline: none;
+    border-color: #4a76a8;
+    background: rgba(0, 0, 0, 0.5);
+    box-shadow: 0 0 0 3px rgba(74, 118, 168, 0.2);
+}
+
+.form-control-glass option {
+    background: #1f2937;
+    color: white;
+}
+
+/* Actions */
+.action-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    /* Reduced gap */
+    margin-top: 0.5rem;
+}
+
+.btn-glass {
+    padding: 0.8rem;
+    /* Reduced padding */
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    /* Reduced font size */
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.btn-primary-glass {
+    background: linear-gradient(135deg, #4f46e5, #3b82f6);
+    color: white;
+    box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+}
+
+.btn-primary-glass:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(59, 130, 246, 0.6);
+}
+
+.btn-secondary-glass {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.btn-secondary-glass:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
+}
+
+.btn-back-glass {
+    background: transparent;
+    color: #9ca3af;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 0.4rem 0.8rem;
+    /* Reduced padding */
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    align-self: flex-start;
+    margin-bottom: 1rem;
+    font-size: 0.9rem;
+}
+
+.btn-back-glass:hover {
+    color: white;
+    border-color: white;
+}
+
+/* Video */
+.video-container {
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}

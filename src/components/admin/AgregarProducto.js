@@ -42,21 +42,21 @@ function AgregarProducto() {
         // Asume que este endpoint devuelve un array de categorías [{id: 1, name: 'Cat1'}, ...]
         const response = await fetch(backendUrl('get_categories.php'));
         if (!response.ok) {
-           throw new Error(`Error HTTP al cargar categorías: ${response.status}`);
+          throw new Error(`Error HTTP al cargar categorías: ${response.status}`);
         }
-          const data = await response.json();
-          // Validar que la respuesta sea un array
-          if (Array.isArray(data)) {
-            // Ocultar categoría fallback "FALTA CATEGORIA" en el formulario de agregar
-            const filtered = data.filter(cat => {
-             if (!cat || !cat.name) return false;
-             const nameNorm = String(cat.name).trim().toUpperCase();
-             return !(nameNorm === 'FALTA CATEGORIA' || nameNorm === 'FALTA CATEGORÍA');
-            });
-            setCategories(filtered);
+        const data = await response.json();
+        // Validar que la respuesta sea un array
+        if (Array.isArray(data)) {
+          // Ocultar categoría fallback "FALTA CATEGORIA" en el formulario de agregar
+          const filtered = data.filter(cat => {
+            if (!cat || !cat.name) return false;
+            const nameNorm = String(cat.name).trim().toUpperCase();
+            return !(nameNorm === 'FALTA CATEGORIA' || nameNorm === 'FALTA CATEGORÍA');
+          });
+          setCategories(filtered);
         } else {
-           console.warn("Respuesta inesperada para categorías, se esperaba un array:", data);
-           setCategories([]); // Establecer vacío si no es array
+          console.warn("Respuesta inesperada para categorías, se esperaba un array:", data);
+          setCategories([]); // Establecer vacío si no es array
         }
       } catch (err) {
         console.error('Error al cargar categorías:', err);
@@ -226,6 +226,21 @@ function AgregarProducto() {
       });
     }
 
+    // Adjuntar colores (si los hay)
+    if (colors.length > 0) {
+      colors.forEach((color, index) => {
+        if (color.color) {
+          formDataToSend.append(`colors[${index}][hex]`, color.color);
+          formDataToSend.append(`colors[${index}][name]`, color.color);
+
+          // Adjuntar imagen del color si existe
+          if (color.image instanceof File) {
+            formDataToSend.append(`color_image_${index}`, color.image);
+          }
+        }
+      });
+    }
+
     // Log para depuración (opcional)
     // console.log("Enviando FormData:");
     // for (let [key, value] of formDataToSend.entries()) {
@@ -240,15 +255,15 @@ function AgregarProducto() {
       });
 
       let data;
-        // Leer siempre el texto crudo primero para poder depurar respuestas no-JSON
-        const rawText = await response.text();
-        console.log('Respuesta cruda del servidor (status:', response.status + '):', rawText.slice(0,1000));
-        try {
-          data = JSON.parse(rawText);
-          console.log('Respuesta JSON recibida:', data);
-        } catch (parseErr) {
-          throw new Error(`Respuesta inválida del servidor (${response.status}). Texto: ${rawText.substring(0,200)}...`);
-        }
+      // Leer siempre el texto crudo primero para poder depurar respuestas no-JSON
+      const rawText = await response.text();
+      console.log('Respuesta cruda del servidor (status:', response.status + '):', rawText.slice(0, 1000));
+      try {
+        data = JSON.parse(rawText);
+        console.log('Respuesta JSON recibida:', data);
+      } catch (parseErr) {
+        throw new Error(`Respuesta inválida del servidor (${response.status}). Texto: ${rawText.substring(0, 200)}...`);
+      }
 
       if (!response.ok || !data.success) {
         // Mostrar mensaje del backend (ej: slug duplicado) sin tratarlo como fallo de parseo
@@ -274,7 +289,7 @@ function AgregarProducto() {
       <h2>Agregar Nuevo Producto</h2>
 
       {/* Muestra el mensaje de error si existe */}
-      {error && <div className="error-message" style={{color: 'red', marginBottom: '1rem'}}>{error}</div>}
+      {error && <div className="error-message" style={{ color: 'red', marginBottom: '1rem' }}>{error}</div>}
 
       <form onSubmit={handleSubmit} className="product-form"> {/* Clase específica para el form */}
 
@@ -359,7 +374,7 @@ function AgregarProducto() {
 
           {/* Cantidad en Stock (condicional) */}
           {formData.stock_option === 'instock' && (
-            <div className="form-group" style={{marginTop: '0.5rem'}}> {/* Añadir un poco de espacio */}
+            <div className="form-group" style={{ marginTop: '0.5rem' }}> {/* Añadir un poco de espacio */}
               <label htmlFor="stock_quantity" className="form-label">Cantidad en Stock</label>
               <input type="number" id="stock_quantity" name="stock_quantity" className="form-control" value={formData.stock_quantity} onChange={handleChange} min="0" required />
             </div>
@@ -396,7 +411,7 @@ function AgregarProducto() {
             required // La imagen principal es requerida
           />
           {/* Muestra la vista previa si existe */}
-          {imagePreview && <img src={imagePreview} alt="Vista previa" className="image-upload-preview" style={{marginTop: '1rem', maxWidth: '200px', height: 'auto'}} />}
+          {imagePreview && <img src={imagePreview} alt="Vista previa" className="image-upload-preview" style={{ marginTop: '1rem', maxWidth: '200px', height: 'auto' }} />}
         </div>
 
         {/* Imagen Adicional 1 */}
@@ -410,7 +425,7 @@ function AgregarProducto() {
             onChange={handleFileChange}
             accept="image/jpeg,image/png,image/gif,image/webp"
           />
-          {previewImage1 && <img src={previewImage1} alt="Adicional 1" style={{marginTop:'0.5rem', maxWidth:'160px', border:'1px solid #ccc', borderRadius:'4px'}} />}
+          {previewImage1 && <img src={previewImage1} alt="Adicional 1" style={{ marginTop: '0.5rem', maxWidth: '160px', border: '1px solid #ccc', borderRadius: '4px' }} />}
           {/* Podrías añadir vistas previas para estas también si lo deseas */}
         </div>
 
@@ -425,7 +440,7 @@ function AgregarProducto() {
             onChange={handleFileChange}
             accept="image/jpeg,image/png,image/gif,image/webp"
           />
-          {previewImage2 && <img src={previewImage2} alt="Adicional 2" style={{marginTop:'0.5rem', maxWidth:'160px', border:'1px solid #ccc', borderRadius:'4px'}} />}
+          {previewImage2 && <img src={previewImage2} alt="Adicional 2" style={{ marginTop: '0.5rem', maxWidth: '160px', border: '1px solid #ccc', borderRadius: '4px' }} />}
         </div>
 
         {/* Galería de Imágenes (múltiples) */}
@@ -442,11 +457,11 @@ function AgregarProducto() {
           />
           <small>Se permite subir varias imágenes (hasta 20 en total por producto).</small>
           {additionalPreviews.length > 0 && (
-            <div style={{display:'flex',flexWrap:'wrap',gap:'8px',marginTop:'0.75rem'}}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '0.75rem' }}>
               {additionalPreviews.map(p => (
-                <div key={p.name} style={{position:'relative'}}>
-                  <img src={p.url} alt={p.name} style={{width:'100px',height:'100px',objectFit:'cover',borderRadius:'4px',border:'1px solid #ccc'}} />
-                  <div style={{fontSize:'0.6rem',maxWidth:'100px',overflow:'hidden',textOverflow:'ellipsis'}}>{p.name}</div>
+                <div key={p.name} style={{ position: 'relative' }}>
+                  <img src={p.url} alt={p.name} style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '4px', border: '1px solid #ccc' }} />
+                  <div style={{ fontSize: '0.6rem', maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</div>
                 </div>
               ))}
             </div>

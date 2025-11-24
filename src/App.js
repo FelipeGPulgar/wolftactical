@@ -2,6 +2,7 @@
 import React from "react";
 // Se eliminó 'BrowserRouter as Router' ya que no se usa aquí
 import { Route, Routes, Navigate, useLocation } from "react-router-dom";
+import { HelmetProvider } from 'react-helmet-async';
 import Navbar from "./components/Navbar";
 import AdminNavbar from "./components/admin/AdminNavbar";
 import Footer from "./components/Footer";
@@ -30,7 +31,7 @@ function App() {
   const isAdminRoute = location.pathname.startsWith('/admin');
 
   return (
-    <>
+    <HelmetProvider>
       {isAdminRoute ? <AdminNavbar /> : <Navbar />}
       <div className="main-content">
         <Routes>
@@ -58,7 +59,7 @@ function App() {
         </Routes>
       </div>
       {!isAdminRoute && <Footer />}
-    </>
+    </HelmetProvider>
   );
 }
 

@@ -132,13 +132,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             }
         }
 
-        // 4. Devolver la respuesta JSON combinada
+        // 4. Obtener colores del producto
+        $colors = [];
+        try {
+            $colorsStmt = $pdo->prepare("
+                SELECT 
+                    pc.id, 
+                    pc.color_name, 
+                    pc.color_hex,
+                    pci.path as image_path
+                FROM product_colors pc
+                LEFT JOIN product_color_images pci ON pc.id = pci.product_color_id AND pci.sort_order = 0
+                WHERE pc.product_id = :pid 
+                ORDER BY pc.id ASC
+            ");
+            $colorsStmt->execute([':pid' => $productId]);
+            $colors = $colorsStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        } catch (PDOException $e) {
+            error_log('[GET Info] Error loading colors: ' . $e->getMessage());
+            $colors = [];
+        }
+
+        // 5. Devolver la respuesta JSON combinada
         echo json_encode([
             'success' => true,
             'product' => $product,
             'categories' => $categories,
             'subcategories' => $subcategories,
-            'images' => $images
+            'images' => $images,
+            'colors' => $colors
         ]);
 
     } catch (Throwable $e) {
@@ -469,16 +491,93 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                          ':sort_order' => $maxSort
                                      ]);
                                      $added_gallery++;
-                                 } else {
-                                     error_log("Error al procesar imagen adicional {$i} para producto ID $id");
-                                 }
-                             }
-                         }
-                     }
-                 }
-             }
+                                  } else {
+                                      error_log("Error al procesar imagen adicional {$i} para producto ID $id");
+                                  }
+                              }
+                          }
+                      }
+                  }
+              }
 
-             echo json_encode(['success' => true, 'message' => 'Producto actualizado correctamente', 'gallery_added' => $added_gallery]);
+              // Procesar nuevos colores (si se enviaron)
+              $colorsAdded = 0;
+              if (isset($_POST['new_colors']) && is_array($_POST['new_colors'])) {
+                  require_once 'image_utils.php';
+                  $target_dir_relative = "uploads/";
+                  $target_dir_absolute = __DIR__ . '/' . $target_dir_relative;
+                  $allowed_extensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+                  
+                  $sqlColor = "INSERT INTO product_colors (product_id, color_name, color_hex) VALUES (:product_id, :color_name, :color_hex)";
+                  $stmtColor = $pdo->prepare($sqlColor);
+                  
+                  $sqlColorImage = "INSERT INTO product_color_images (product_color_id, path, alt, sort_order) VALUES (:color_id, :path, :alt, :sort_order)";
+                  $stmtColorImage = $pdo->prepare($sqlColorImage);
+                  
+                  foreach ($_POST['new_colors'] as $index => $colorData) {
+                      if (isset($colorData['hex']) && !empty($colorData['hex'])) {
+                          $colorHex = $colorData['hex'];
+                          $colorName = isset($colorData['name']) && !empty($colorData['name']) ? $colorData['name'] : $colorHex;
+                          
+                          try {
+                              // Insertar el color
+                              $stmtColor->execute([
+                                  ':product_id' => $id,
+                                  ':color_name' => $colorName,
+                                  ':color_hex' => $colorHex
+                              ]);
+                              $colorId = $pdo->lastInsertId();
+                              $colorsAdded++;
+                              
+                              // Procesar imagen del color si existe
+                              $imageKey = "new_color_image_{$index}";
+                              if (isset($_FILES[$imageKey]) && $_FILES[$imageKey]['error'] === UPLOAD_ERR_OK && !empty($_FILES[$imageKey]['tmp_name'])) {
+                                  $colorImageFile = $_FILES[$imageKey];
+                                  
+                                  // Validar tipo de imagen
+                                  $colorImageType = strtolower(pathinfo($colorImageFile['name'], PATHINFO_EXTENSION));
+                                  $colorCheck = @getimagesize($colorImageFile['tmp_name']);
+                                  
+                                  if ($colorCheck && in_array($colorImageType, $allowed_extensions)) {
+                                      // Procesar y convertir a WebP
+                                      $colorImageBase = uniqid('color_' . $id . '_' . $index . '_');
+                                      $processedColor = processUploadedImage($colorImageFile, $target_dir_absolute . '/', $colorImageBase);
+                                      
+                                      if ($processedColor !== false) {
+                                          $colorImagePath = $target_dir_relative . $processedColor['path'];
+                                          // Insertar en product_color_images
+                                          $stmtColorImage->execute([
+                                              ':color_id' => $colorId,
+                                              ':path' => $colorImagePath,
+                                              ':alt' => $name . ' - ' . $colorName,
+                                              ':sort_order' => 0
+                                          ]);
+                                      } else {
+                                          error_log("Error al procesar imagen de color {$index} para producto ID $id");
+                                      }
+                                  } else {
+                                      error_log("Imagen de color {$index} inválida para producto ID $id");
+                                  }
+                              }
+                          } catch (PDOException $e) {
+                              error_log("Error al insertar color {$index} para producto ID $id: " . $e->getMessage());
+                          }
+                      }
+                  }
+                  
+                  // Crear notificación si se agregaron colores
+                  if ($colorsAdded > 0) {
+                      try {
+                          $notifMsg = "{$colorsAdded} color(es) agregado(s) al producto '{$name}' (ID: {$id})";
+                          $notifStmt = $pdo->prepare("INSERT INTO notifications (message, type) VALUES (:msg, 'success')");
+                          $notifStmt->execute([':msg' => $notifMsg]);
+                      } catch (PDOException $e) {
+                          error_log("Error creating color notification: " . $e->getMessage());
+                      }
+                  }
+              }
+
+            echo json_encode(['success' => true, 'message' => 'Producto actualizado correctamente', 'gallery_added' => $added_gallery]);
 
         } else if ($update_executed && $rows_affected === 0 && !$image_updated) {
              // La consulta se ejecutó bien, pero no cambió nada
